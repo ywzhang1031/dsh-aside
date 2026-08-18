@@ -1,13 +1,13 @@
 window.__ModuleLoader__.load({
-	id: "@deepseek-ai/dsh-client-ui-aside",
+	id: "@ywzhang1031/dsh-client-ui-aside",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+		let react_jsx_runtime = require("react/jsx-runtime");
 		let react = require("react");
 		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
-		let react_jsx_runtime = require("react/jsx-runtime");
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
 		var _a$1;
 		function $constructor(name, initializer, params) {
 			function init(inst, def) {
@@ -66,7 +66,7 @@ window.__ModuleLoader__.load({
 			return globalConfig;
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/util.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/util.js
 		function getEnumValues(entries) {
 			const numericValues = Object.values(entries).filter((v) => typeof v === "number");
 			return Object.entries(entries).filter(([k, _]) => numericValues.indexOf(+k) === -1).map(([_, v]) => v);
@@ -82,7 +82,6 @@ window.__ModuleLoader__.load({
 					Object.defineProperty(this, "value", { value });
 					return value;
 				}
-				throw new Error("cached value already set");
 			} };
 		}
 		function nullish(input) {
@@ -121,7 +120,10 @@ window.__ModuleLoader__.load({
 		}
 		function mergeDefs(...defs) {
 			const mergedDescriptors = {};
-			for (const def of defs) Object.assign(mergedDescriptors, Object.getOwnPropertyDescriptors(def));
+			for (const def of defs) {
+				const descriptors = Object.getOwnPropertyDescriptors(def);
+				Object.assign(mergedDescriptors, descriptors);
+			}
 			return Object.defineProperties({}, mergedDescriptors);
 		}
 		function esc(str) {
@@ -365,7 +367,7 @@ window.__ModuleLoader__.load({
 			return { ...iss };
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/errors.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/errors.js
 		const initializer$1 = (inst, def) => {
 			inst.name = "$ZodError";
 			Object.defineProperty(inst, "_zod", {
@@ -425,7 +427,7 @@ window.__ModuleLoader__.load({
 			return fieldErrors;
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/parse.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/parse.js
 		const _parse = (_Err) => (schema, value, _ctx, _params) => {
 			const ctx = _ctx ? {
 				..._ctx,
@@ -539,7 +541,7 @@ window.__ModuleLoader__.load({
 			return _safeParseAsync(_Err)(schema, value, _ctx);
 		};
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/regexes.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/regexes.js
 		/**
 		* @deprecated CUID v1 is deprecated by its authors due to information leakage
 		* (timestamps embedded in the id). Use {@link cuid2} instead.
@@ -600,7 +602,7 @@ window.__ModuleLoader__.load({
 		const lowercase = /^[^A-Z]*$/;
 		const uppercase = /^[^a-z]*$/;
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/checks.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/checks.js
 		const $ZodCheck = /*@__PURE__*/ $constructor("$ZodCheck", (inst, def) => {
 			var _a;
 			inst._zod ?? (inst._zod = {});
@@ -819,7 +821,7 @@ window.__ModuleLoader__.load({
 			};
 		});
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/doc.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/doc.js
 		var Doc = class {
 			constructor(args = []) {
 				this.content = [];
@@ -850,14 +852,14 @@ window.__ModuleLoader__.load({
 			}
 		};
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
 		const version = {
 			major: 4,
 			minor: 4,
 			patch: 3
 		};
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/schemas.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/schemas.js
 		const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
 			var _a;
 			inst ?? (inst = {});
@@ -1718,7 +1720,7 @@ window.__ModuleLoader__.load({
 			inst._zod.optin = "optional";
 			inst._zod.optout = "optional";
 			defineLazy(inst._zod, "values", () => {
-				return def.innerType._zod.values ? new Set([...def.innerType._zod.values, void 0]) : void 0;
+				return def.innerType._zod.values ? /* @__PURE__ */ new Set([...def.innerType._zod.values, void 0]) : void 0;
 			});
 			defineLazy(inst._zod, "pattern", () => {
 				const pattern = def.innerType._zod.pattern;
@@ -1752,7 +1754,7 @@ window.__ModuleLoader__.load({
 				return pattern ? new RegExp(`^(${cleanRegex(pattern.source)}|null)$`) : void 0;
 			});
 			defineLazy(inst._zod, "values", () => {
-				return def.innerType._zod.values ? new Set([...def.innerType._zod.values, null]) : void 0;
+				return def.innerType._zod.values ? /* @__PURE__ */ new Set([...def.innerType._zod.values, null]) : void 0;
 			});
 			inst._zod.parse = (payload, ctx) => {
 				if (payload.value === null) return payload;
@@ -1918,7 +1920,7 @@ window.__ModuleLoader__.load({
 			}
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/registries.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/registries.js
 		var _a;
 		var $ZodRegistry = class {
 			constructor() {
@@ -1965,7 +1967,7 @@ window.__ModuleLoader__.load({
 		(_a = globalThis).__zod_globalRegistry ?? (_a.__zod_globalRegistry = registry());
 		const globalRegistry = globalThis.__zod_globalRegistry;
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/api.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/api.js
 		// @__NO_SIDE_EFFECTS__
 		function _string(Class, params) {
 			return new Class({
@@ -2401,7 +2403,7 @@ window.__ModuleLoader__.load({
 			return ch;
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/to-json-schema.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/to-json-schema.js
 		function initializeContext(params) {
 			let target = params?.target ?? "draft-2020-12";
 			if (target === "draft-4") target = "draft-04";
@@ -2617,8 +2619,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					defs[seen.defId] = seen.def;
 				}
 			}
-			if (ctx.external) {} else if (Object.keys(defs).length > 0) if (ctx.target === "draft-2020-12") result.$defs = defs;
-			else result.definitions = defs;
+			if (ctx.external) {} else if (Object.keys(defs).length > 0) {
+				if (ctx.target === "draft-2020-12") result.$defs = defs;
+				else result.definitions = defs;
+			}
 			try {
 				const finalized = JSON.parse(JSON.stringify(result));
 				Object.defineProperty(finalized, "~standard", {
@@ -2694,7 +2698,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return finalize(ctx, schema);
 		};
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema-processors.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema-processors.js
 		const formatMap = {
 			guid: "uuid",
 			url: "uri",
@@ -2879,7 +2883,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			seen.ref = def.innerType;
 		};
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/iso.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/iso.js
 		const ZodISODateTime = /*@__PURE__*/ $constructor("ZodISODateTime", (inst, def) => {
 			$ZodISODateTime.init(inst, def);
 			ZodStringFormat.init(inst, def);
@@ -2909,7 +2913,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return /* @__PURE__ */ _isoDuration(ZodISODuration, params);
 		}
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/errors.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/errors.js
 		const initializer = (inst, issues) => {
 			$ZodError.init(inst, issues);
 			inst.name = "ZodError";
@@ -2931,7 +2935,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		};
 		const ZodRealError = /*@__PURE__*/ $constructor("ZodError", initializer, { Parent: Error });
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/parse.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/parse.js
 		const parse = /* @__PURE__ */ _parse(ZodRealError);
 		const parseAsync = /* @__PURE__ */ _parseAsync(ZodRealError);
 		const safeParse = /* @__PURE__ */ _safeParse(ZodRealError);
@@ -2945,7 +2949,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		const safeEncodeAsync = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 		const safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 		//#endregion
-		//#region ../../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/schemas.js
+		//#region ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/schemas.js
 		const _installedGroups = /* @__PURE__ */ new WeakMap();
 		function _installLazyMethods(inst, group, methods) {
 			const proto = Object.getPrototypeOf(inst);
@@ -3390,11 +3394,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			});
 		});
 		function object(shape, params) {
-			return new ZodObject({
+			const def = {
 				type: "object",
 				shape: shape ?? {},
 				...normalizeParams(params)
-			});
+			};
+			return new ZodObject(def);
 		}
 		const ZodUnion = /*@__PURE__*/ $constructor("ZodUnion", (inst, def) => {
 			$ZodUnion.init(inst, def);
@@ -3452,9 +3457,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			};
 		});
 		function _enum(values, params) {
+			const entries = Array.isArray(values) ? Object.fromEntries(values.map((v) => [v, v])) : values;
 			return new ZodEnum({
 				type: "enum",
-				entries: Array.isArray(values) ? Object.fromEntries(values.map((v) => [v, v])) : values,
+				entries,
 				...normalizeParams(params)
 			});
 		}
@@ -3661,7 +3667,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}]
 		};
 		//#endregion
-		//#region src/client/anchors.ts
+		//#region lib/types/client/anchors.js
+		/**
+		* Aside anchor persistence: the mapping from an asked-about prose span to
+		* its read-only side conversation, kept in browser localStorage so anchors
+		* survive reloads. This is client-only presentation state — the durable
+		* authority (parent lineage, aside lineage) lives in the session logs; a
+		* lost anchor store degrades to anchors that simply no longer list, while
+		* the side conversations stay reachable from the session list.
+		* @module @deepseek-ai/dsh-client-ui-aside/anchors
+		*/
 		const STORAGE_KEY = "dsh-aside-anchors";
 		/** Read the persisted record list, degrading to empty on any corruption. */
 		function readRecords(storage) {
@@ -3751,7 +3766,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}
 		}
 		//#endregion
-		//#region src/client/drawer-store.ts
+		//#region lib/types/client/drawer-store.js
+		/**
+		* Drawer open-state store: which side conversation the overlay shows, or a
+		* pending draft that only becomes a real aside once the user actually sends
+		* a question. A closed unanswered draft leaves nothing behind — no session,
+		* no anchor, no highlight.
+		* @module @deepseek-ai/dsh-client-ui-aside/drawer-store
+		*/
 		const CLOSED = {
 			subSessionId: null,
 			parentSessionId: null,
@@ -3838,7 +3860,18 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}
 		};
 		//#endregion
-		//#region src/client/selection.ts
+		//#region lib/types/client/selection.js
+		/**
+		* Prose-selection watcher: detects a text selection in the conversation
+		* surface, floats an "ask about this" button above it, and hands the
+		* resolved selection context to the plugin's opener. Stock renderers publish
+		* no message-level DOM identity, so the watcher attributes the selection to
+		* the CURRENT session from the runtime sessions service; message identity is
+		* left to the per-message aside action on the assistant-actions strip, which
+		* receives the stock `messageId`. The watcher stays outside the React tree
+		* entirely.
+		* @module @deepseek-ai/dsh-client-ui-aside/selection
+		*/
 		/** Selection bounds: reject empty, whole-message, or giant selections. */
 		const MIN_SELECTION_CHARS = 2;
 		const MAX_SELECTION_CHARS = 800;
@@ -3966,39 +3999,39 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}
 		};
 		//#endregion
-		//#region \0dsh-css:/Users/evan/codebase/deepseek-harness/packages/aside/client-ui-aside/src/client/AsideDrawer.module.css.mjs
-		const css$2 = ".Q-rJWW_drawer{z-index:60;border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:12px;flex-direction:column;width:min(420px,100vw - 24px);display:flex;position:fixed;top:12px;bottom:12px;right:12px;overflow:hidden;box-shadow:0 12px 40px #0000002e}.Q-rJWW_header{border-bottom:1px solid var(--dsw-alias-line-weak,#7f7f7f40);padding:12px 44px 10px 14px;position:relative}.Q-rJWW_titleRow{align-items:center;gap:8px;display:flex}.Q-rJWW_title{text-overflow:ellipsis;white-space:nowrap;margin:0;font-size:15px;font-weight:600;overflow:hidden}.Q-rJWW_readonlyBadge{border:1px solid var(--dsw-alias-state-warning,#b26a00);color:var(--dsw-alias-state-warning,#b26a00);border-radius:999px;flex:none;padding:1px 8px;font-size:11px}.Q-rJWW_hint{color:var(--dsw-alias-text-secondary,#666);margin:6px 0 0;font-size:12px}.Q-rJWW_close{width:28px;height:28px;color:var(--dsw-alias-text-secondary,#666);cursor:pointer;background:0 0;border:none;border-radius:6px;font-size:20px;line-height:1;position:absolute;top:8px;right:10px}.Q-rJWW_close:hover{background:var(--dsw-alias-bg-hover,#0000000d)}.Q-rJWW_error{background:color-mix(in srgb, var(--dsw-alias-state-danger,#c00) 10%, transparent);color:var(--dsw-alias-state-danger,#c00);border-radius:8px;margin:8px 14px 0;padding:8px 10px;font-size:12px}.Q-rJWW_summaryStatus{color:var(--dsw-alias-text-secondary,#666);margin:8px 14px 0;font-size:12px}.Q-rJWW_messages{flex-direction:column;flex:1;gap:12px;padding:12px 14px;display:flex;overflow-y:auto}.Q-rJWW_status{color:var(--dsw-alias-text-secondary,#666);margin:0;font-size:13px}.Q-rJWW_row{flex-direction:column;gap:4px;display:flex}.Q-rJWW_role{color:var(--dsw-alias-text-secondary,#888);font-size:11px;font-weight:600}.Q-rJWW_userText{white-space:pre-wrap;word-break:break-word;margin:0;font-size:13px}.Q-rJWW_toolRow{background:var(--dsw-alias-bg-hover,#0000000d);color:var(--dsw-alias-text-secondary,#666);border-radius:999px;align-self:flex-start;padding:3px 10px;font-size:12px}.Q-rJWW_composer{border-top:1px solid var(--dsw-alias-line-weak,#7f7f7f40);flex-direction:column;gap:8px;padding:10px 14px 14px;display:flex}.Q-rJWW_prefillHint{color:var(--dsw-alias-text-secondary,#666);margin:0;font-size:12px}.Q-rJWW_input{border:1px solid var(--dsw-alias-line-weak,#7f7f7f59);background:var(--dsw-alias-bg-base,#fafafa);width:100%;min-height:84px;max-height:200px;font:inherit;resize:vertical;border-radius:8px;padding:8px 10px;font-size:13px}.Q-rJWW_send{background:var(--dsw-alias-state-business-primary,#1a6bff);color:#fff;font:inherit;cursor:pointer;border:none;border-radius:8px;align-self:flex-end;padding:6px 18px;font-size:13px}.Q-rJWW_send:disabled{opacity:.5;cursor:not-allowed}";
-		const tagId$2 = "@deepseek-ai/dsh-client-ui-aside/AsideDrawer.module.css";
+		//#region \0dsh-css:/Users/evan/Desktop/dsh-aside/packages/client-ui-aside/src/client/AsideDrawer.module.css.mjs
+		const css$2 = ".seqwXG_drawer{z-index:60;border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:12px;flex-direction:column;width:min(420px,100vw - 24px);display:flex;position:fixed;top:12px;bottom:12px;right:12px;overflow:hidden;box-shadow:0 12px 40px #0000002e}.seqwXG_header{border-bottom:1px solid var(--dsw-alias-line-weak,#7f7f7f40);padding:12px 44px 10px 14px;position:relative}.seqwXG_titleRow{align-items:center;gap:8px;display:flex}.seqwXG_title{text-overflow:ellipsis;white-space:nowrap;margin:0;font-size:15px;font-weight:600;overflow:hidden}.seqwXG_readonlyBadge{border:1px solid var(--dsw-alias-state-warning,#b26a00);color:var(--dsw-alias-state-warning,#b26a00);border-radius:999px;flex:none;padding:1px 8px;font-size:11px}.seqwXG_hint{color:var(--dsw-alias-text-secondary,#666);margin:6px 0 0;font-size:12px}.seqwXG_close{width:28px;height:28px;color:var(--dsw-alias-text-secondary,#666);cursor:pointer;background:0 0;border:none;border-radius:6px;font-size:20px;line-height:1;position:absolute;top:8px;right:10px}.seqwXG_close:hover{background:var(--dsw-alias-bg-hover,#0000000d)}.seqwXG_error{background:color-mix(in srgb, var(--dsw-alias-state-danger,#c00) 10%, transparent);color:var(--dsw-alias-state-danger,#c00);border-radius:8px;margin:8px 14px 0;padding:8px 10px;font-size:12px}.seqwXG_summaryStatus{color:var(--dsw-alias-text-secondary,#666);margin:8px 14px 0;font-size:12px}.seqwXG_messages{flex-direction:column;flex:1;gap:12px;padding:12px 14px;display:flex;overflow-y:auto}.seqwXG_status{color:var(--dsw-alias-text-secondary,#666);margin:0;font-size:13px}.seqwXG_row{flex-direction:column;gap:4px;display:flex}.seqwXG_role{color:var(--dsw-alias-text-secondary,#888);font-size:11px;font-weight:600}.seqwXG_userText{white-space:pre-wrap;word-break:break-word;margin:0;font-size:13px}.seqwXG_toolRow{background:var(--dsw-alias-bg-hover,#0000000d);color:var(--dsw-alias-text-secondary,#666);border-radius:999px;align-self:flex-start;padding:3px 10px;font-size:12px}.seqwXG_composer{border-top:1px solid var(--dsw-alias-line-weak,#7f7f7f40);flex-direction:column;gap:8px;padding:10px 14px 14px;display:flex}.seqwXG_prefillHint{color:var(--dsw-alias-text-secondary,#666);margin:0;font-size:12px}.seqwXG_input{border:1px solid var(--dsw-alias-line-weak,#7f7f7f59);background:var(--dsw-alias-bg-base,#fafafa);width:100%;min-height:84px;max-height:200px;font:inherit;resize:vertical;border-radius:8px;padding:8px 10px;font-size:13px}.seqwXG_send{background:var(--dsw-alias-state-business-primary,#1a6bff);color:#fff;font:inherit;cursor:pointer;border:none;border-radius:8px;align-self:flex-end;padding:6px 18px;font-size:13px}.seqwXG_send:disabled{opacity:.5;cursor:not-allowed}";
+		const tagId$2 = "@ywzhang1031/dsh-client-ui-aside/AsideDrawer.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-aside";
+			tag.dataset.plugin = "@ywzhang1031/dsh-client-ui-aside";
 			tag.dataset.pluginCss = tagId$2;
 			tag.textContent = css$2;
 			document.head.appendChild(tag);
 		}
 		var AsideDrawer_module_css_default = {
-			"row": "Q-rJWW_row",
-			"drawer": "Q-rJWW_drawer",
-			"composer": "Q-rJWW_composer",
-			"send": "Q-rJWW_send",
-			"input": "Q-rJWW_input",
-			"status": "Q-rJWW_status",
-			"hint": "Q-rJWW_hint",
-			"readonlyBadge": "Q-rJWW_readonlyBadge",
-			"error": "Q-rJWW_error",
-			"prefillHint": "Q-rJWW_prefillHint",
-			"close": "Q-rJWW_close",
-			"titleRow": "Q-rJWW_titleRow",
-			"title": "Q-rJWW_title",
-			"role": "Q-rJWW_role",
-			"toolRow": "Q-rJWW_toolRow",
-			"userText": "Q-rJWW_userText",
-			"summaryStatus": "Q-rJWW_summaryStatus",
-			"header": "Q-rJWW_header",
-			"messages": "Q-rJWW_messages"
+			"titleRow": "seqwXG_titleRow",
+			"input": "seqwXG_input",
+			"readonlyBadge": "seqwXG_readonlyBadge",
+			"messages": "seqwXG_messages",
+			"row": "seqwXG_row",
+			"close": "seqwXG_close",
+			"hint": "seqwXG_hint",
+			"error": "seqwXG_error",
+			"status": "seqwXG_status",
+			"summaryStatus": "seqwXG_summaryStatus",
+			"drawer": "seqwXG_drawer",
+			"role": "seqwXG_role",
+			"prefillHint": "seqwXG_prefillHint",
+			"toolRow": "seqwXG_toolRow",
+			"header": "seqwXG_header",
+			"title": "seqwXG_title",
+			"composer": "seqwXG_composer",
+			"userText": "seqwXG_userText",
+			"send": "seqwXG_send"
 		};
 		//#endregion
-		//#region src/client/AsideDrawer.tsx
+		//#region lib/types/client/AsideDrawer.js
 		/**
 		* Side-conversation drawer over the frame-wide overlay slot: a compact
 		* read-only chat panel. It opens as a DRAFT bound to one prose selection
@@ -4124,30 +4157,30 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				return compact.length > 40 ? `${compact.slice(0, 40)}…` : compact;
 			}, [state.anchorText]);
 			if (subSessionId === null && !state.draft) return null;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("aside", {
+			return (0, react_jsx_runtime.jsxs)("aside", {
 				className: AsideDrawer_module_css_default.drawer,
 				role: "dialog",
 				"aria-label": t("title"),
 				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
+					(0, react_jsx_runtime.jsxs)("header", {
 						className: AsideDrawer_module_css_default.header,
 						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							(0, react_jsx_runtime.jsxs)("div", {
 								className: AsideDrawer_module_css_default.titleRow,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", {
+								children: [(0, react_jsx_runtime.jsx)("h2", {
 									className: AsideDrawer_module_css_default.title,
 									title: state.anchorText,
 									children: title
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								}), (0, react_jsx_runtime.jsx)("span", {
 									className: AsideDrawer_module_css_default.readonlyBadge,
 									children: t("readonlyBadge")
 								})]
 							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+							(0, react_jsx_runtime.jsx)("p", {
 								className: AsideDrawer_module_css_default.hint,
 								children: t("readonlyHint")
 							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							(0, react_jsx_runtime.jsx)("button", {
 								type: "button",
 								className: AsideDrawer_module_css_default.close,
 								"aria-label": t("close"),
@@ -4158,45 +4191,45 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 							})
 						]
 					}),
-					state.error !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+					state.error !== null && (0, react_jsx_runtime.jsx)("p", {
 						className: AsideDrawer_module_css_default.error,
 						role: "alert",
 						children: t("error", { message: state.error })
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					(0, react_jsx_runtime.jsxs)("div", {
 						className: AsideDrawer_module_css_default.messages,
 						children: [
-							state.draft && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+							state.draft && (0, react_jsx_runtime.jsx)("p", {
 								className: AsideDrawer_module_css_default.status,
 								children: t("draftHint")
 							}),
-							!state.draft && !loaded && rows.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+							!state.draft && !loaded && rows.length === 0 && (0, react_jsx_runtime.jsx)("p", {
 								className: AsideDrawer_module_css_default.status,
 								children: t("loading")
 							}),
-							!state.draft && loaded && rows.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+							!state.draft && loaded && rows.length === 0 && (0, react_jsx_runtime.jsx)("p", {
 								className: AsideDrawer_module_css_default.status,
 								children: t("empty")
 							}),
-							rows.map((row, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							rows.map((row, index) => (0, react_jsx_runtime.jsx)("div", {
 								className: AsideDrawer_module_css_default.row,
 								"data-row-kind": row.kind,
-								children: row.kind === "tool" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								children: row.kind === "tool" ? (0, react_jsx_runtime.jsxs)("span", {
 									className: AsideDrawer_module_css_default.toolRow,
 									children: ["🔍 ", row.name]
-								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								}) : (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [(0, react_jsx_runtime.jsx)("span", {
 									className: AsideDrawer_module_css_default.role,
 									children: row.kind === "user" ? t("userRole") : t("assistantRole")
-								}), row.kind === "assistant" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, { text: row.text }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+								}), row.kind === "assistant" ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, { text: row.text }) : (0, react_jsx_runtime.jsx)("p", {
 									className: AsideDrawer_module_css_default.userText,
 									children: row.text
 								})] })
 							}, index))
 						]
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					(0, react_jsx_runtime.jsxs)("div", {
 						className: AsideDrawer_module_css_default.composer,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("textarea", {
+						children: [(0, react_jsx_runtime.jsx)("textarea", {
 							ref: inputRef,
 							className: AsideDrawer_module_css_default.input,
 							value,
@@ -4210,7 +4243,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 									send();
 								}
 							}
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						}), (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							className: AsideDrawer_module_css_default.send,
 							disabled: sending || value.trim() === "",
@@ -4224,7 +4257,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			});
 		}
 		//#endregion
-		//#region src/client/fold.ts
+		//#region lib/types/client/fold.js
+		/**
+		* Sidebar folds over raw history entries: produced-file paths and web-search
+		* sources, both extracted from settled `tool/result` metadata — the same
+		* durable facts the tool cards present, folded across the whole conversation
+		* instead of one turn. Pure functions; the sidebar component supplies the
+		* history entries and the refresh cadence.
+		* @module @deepseek-ai/dsh-client-ui-aside/fold
+		*/
 		/** Whether a tool/result payload is a mutation (write/edit) outcome. */
 		function isMutationMeta(meta) {
 			return typeof meta === "object" && meta !== null && ("path" in meta || "diffs" in meta || "locations" in meta);
@@ -4293,30 +4334,30 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return out;
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/evan/codebase/deepseek-harness/packages/aside/client-ui-aside/src/client/AsideSidebar.module.css.mjs
-		const css$1 = ".i1fA5W_sidebar{z-index:40;pointer-events:auto;flex-direction:column;gap:8px;width:268px;max-height:calc(100vh - 24px);display:flex;position:fixed;top:12px;right:12px}.i1fA5W_section{border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:10px;overflow:hidden;box-shadow:0 4px 18px #00000014}.i1fA5W_sectionHead{width:100%;font:inherit;color:var(--dsw-alias-text-primary,#1a1a1a);cursor:pointer;text-align:left;background:0 0;border:none;justify-content:space-between;align-items:center;padding:8px 12px;font-size:12px;font-weight:600;display:flex}.i1fA5W_sectionHead:hover{background:var(--dsw-alias-bg-hover,#0000000a)}.i1fA5W_count{background:var(--dsw-alias-bg-hover,#0000000f);color:var(--dsw-alias-text-secondary,#666);border-radius:999px;padding:0 8px;font-size:11px;font-weight:500}.i1fA5W_list{flex-direction:column;gap:2px;max-height:240px;margin:0;padding:0 6px 8px;list-style:none;display:flex;overflow-y:auto}.i1fA5W_empty{color:var(--dsw-alias-text-secondary,#888);padding:4px 8px;font-size:12px}.i1fA5W_asideEntry,.i1fA5W_artifactEntry{width:100%;font:inherit;color:var(--dsw-alias-state-business-primary,#1a6bff);text-align:left;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:none;border-radius:6px;padding:5px 8px;font-size:12px;overflow:hidden}.i1fA5W_asideEntry:hover,.i1fA5W_artifactEntry:hover{background:var(--dsw-alias-bg-hover,#0000000d);text-underline-offset:2px;text-decoration:underline}.i1fA5W_asideText{text-overflow:ellipsis;white-space:nowrap;display:block;overflow:hidden}.i1fA5W_sourceEntry{color:var(--dsw-alias-state-business-primary,#1a6bff);text-overflow:ellipsis;white-space:nowrap;border-radius:6px;padding:5px 8px;font-size:12px;text-decoration:none;display:block;overflow:hidden}.i1fA5W_sourceEntry:hover{background:var(--dsw-alias-bg-hover,#0000000d);text-underline-offset:2px;text-decoration:underline}";
-		const tagId$1 = "@deepseek-ai/dsh-client-ui-aside/AsideSidebar.module.css";
+		//#region \0dsh-css:/Users/evan/Desktop/dsh-aside/packages/client-ui-aside/src/client/AsideSidebar.module.css.mjs
+		const css$1 = ".P7Ci5G_sidebar{z-index:40;pointer-events:auto;flex-direction:column;gap:8px;width:268px;max-height:calc(100vh - 24px);display:flex;position:fixed;top:12px;right:12px}.P7Ci5G_section{border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:10px;overflow:hidden;box-shadow:0 4px 18px #00000014}.P7Ci5G_sectionHead{width:100%;font:inherit;color:var(--dsw-alias-text-primary,#1a1a1a);cursor:pointer;text-align:left;background:0 0;border:none;justify-content:space-between;align-items:center;padding:8px 12px;font-size:12px;font-weight:600;display:flex}.P7Ci5G_sectionHead:hover{background:var(--dsw-alias-bg-hover,#0000000a)}.P7Ci5G_count{background:var(--dsw-alias-bg-hover,#0000000f);color:var(--dsw-alias-text-secondary,#666);border-radius:999px;padding:0 8px;font-size:11px;font-weight:500}.P7Ci5G_list{flex-direction:column;gap:2px;max-height:240px;margin:0;padding:0 6px 8px;list-style:none;display:flex;overflow-y:auto}.P7Ci5G_empty{color:var(--dsw-alias-text-secondary,#888);padding:4px 8px;font-size:12px}.P7Ci5G_asideEntry,.P7Ci5G_artifactEntry{width:100%;font:inherit;color:var(--dsw-alias-state-business-primary,#1a6bff);text-align:left;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:none;border-radius:6px;padding:5px 8px;font-size:12px;overflow:hidden}.P7Ci5G_asideEntry:hover,.P7Ci5G_artifactEntry:hover{background:var(--dsw-alias-bg-hover,#0000000d);text-underline-offset:2px;text-decoration:underline}.P7Ci5G_asideText{text-overflow:ellipsis;white-space:nowrap;display:block;overflow:hidden}.P7Ci5G_sourceEntry{color:var(--dsw-alias-state-business-primary,#1a6bff);text-overflow:ellipsis;white-space:nowrap;border-radius:6px;padding:5px 8px;font-size:12px;text-decoration:none;display:block;overflow:hidden}.P7Ci5G_sourceEntry:hover{background:var(--dsw-alias-bg-hover,#0000000d);text-underline-offset:2px;text-decoration:underline}";
+		const tagId$1 = "@ywzhang1031/dsh-client-ui-aside/AsideSidebar.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-aside";
+			tag.dataset.plugin = "@ywzhang1031/dsh-client-ui-aside";
 			tag.dataset.pluginCss = tagId$1;
 			tag.textContent = css$1;
 			document.head.appendChild(tag);
 		}
 		var AsideSidebar_module_css_default = {
-			"sidebar": "i1fA5W_sidebar",
-			"section": "i1fA5W_section",
-			"asideEntry": "i1fA5W_asideEntry",
-			"asideText": "i1fA5W_asideText",
-			"count": "i1fA5W_count",
-			"list": "i1fA5W_list",
-			"sectionHead": "i1fA5W_sectionHead",
-			"sourceEntry": "i1fA5W_sourceEntry",
-			"artifactEntry": "i1fA5W_artifactEntry",
-			"empty": "i1fA5W_empty"
+			"list": "P7Ci5G_list",
+			"section": "P7Ci5G_section",
+			"empty": "P7Ci5G_empty",
+			"asideEntry": "P7Ci5G_asideEntry",
+			"sectionHead": "P7Ci5G_sectionHead",
+			"artifactEntry": "P7Ci5G_artifactEntry",
+			"asideText": "P7Ci5G_asideText",
+			"count": "P7Ci5G_count",
+			"sidebar": "P7Ci5G_sidebar",
+			"sourceEntry": "P7Ci5G_sourceEntry"
 		};
 		//#endregion
-		//#region src/client/AsideSidebar.tsx
+		//#region lib/types/client/AsideSidebar.js
 		/**
 		* Codex-style frame sidebar: a standing right rail with three sections —
 		* produced files, web-search sources, and the aside chats anchored into the
@@ -4331,7 +4372,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			const anchorVersion = (0, react.useSyncExternalStore)((listener) => anchors.subscribe(listener), () => anchors.getVersion());
 			const [artifacts, setArtifacts] = (0, react.useState)([]);
 			const [sources, setSources] = (0, react.useState)([]);
-			const [open, setOpen] = (0, react.useState)(() => new Set(["asides"]));
+			const [open, setOpen] = (0, react.useState)(() => /* @__PURE__ */ new Set(["asides"]));
 			const asideEntries = (0, react.useMemo)(() => sessionId === null ? [] : [...anchors.list(sessionId)], [
 				anchors,
 				sessionId,
@@ -4378,61 +4419,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			const openSource = (url) => {
 				window.open(url, "_blank", "noopener,noreferrer");
 			};
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("nav", {
+			return (0, react_jsx_runtime.jsxs)("nav", {
 				className: AsideSidebar_module_css_default.sidebar,
 				"aria-label": t("sidebarLabel"),
 				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+					(0, react_jsx_runtime.jsxs)("section", {
 						className: AsideSidebar_module_css_default.section,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+						children: [(0, react_jsx_runtime.jsxs)("button", {
 							type: "button",
 							className: AsideSidebar_module_css_default.sectionHead,
 							"aria-expanded": open.has("asides"),
 							onClick: () => {
 								toggle("asides");
 							},
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("asidesTitle") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							children: [(0, react_jsx_runtime.jsx)("span", { children: t("asidesTitle") }), (0, react_jsx_runtime.jsx)("span", {
 								className: AsideSidebar_module_css_default.count,
 								children: asideEntries.length
 							})]
-						}), open.has("asides") && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
+						}), open.has("asides") && (0, react_jsx_runtime.jsxs)("ul", {
 							className: AsideSidebar_module_css_default.list,
-							children: [asideEntries.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", {
+							children: [asideEntries.length === 0 && (0, react_jsx_runtime.jsx)("li", {
 								className: AsideSidebar_module_css_default.empty,
 								children: t("asidesEmpty")
-							}), asideEntries.map((anchor) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							}), asideEntries.map((anchor) => (0, react_jsx_runtime.jsx)("li", { children: (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
 								className: AsideSidebar_module_css_default.asideEntry,
 								title: anchor.text,
 								onClick: () => {
 									onOpenAside(anchor);
 								},
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								children: (0, react_jsx_runtime.jsx)("span", {
 									className: AsideSidebar_module_css_default.asideText,
 									children: anchor.text.replace(/\s+/g, " ").slice(0, 60)
 								})
 							}) }, anchor.subSessionId))]
 						})]
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+					(0, react_jsx_runtime.jsxs)("section", {
 						className: AsideSidebar_module_css_default.section,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+						children: [(0, react_jsx_runtime.jsxs)("button", {
 							type: "button",
 							className: AsideSidebar_module_css_default.sectionHead,
 							"aria-expanded": open.has("artifacts"),
 							onClick: () => {
 								toggle("artifacts");
 							},
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("artifactsTitle") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							children: [(0, react_jsx_runtime.jsx)("span", { children: t("artifactsTitle") }), (0, react_jsx_runtime.jsx)("span", {
 								className: AsideSidebar_module_css_default.count,
 								children: artifacts.length
 							})]
-						}), open.has("artifacts") && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
+						}), open.has("artifacts") && (0, react_jsx_runtime.jsxs)("ul", {
 							className: AsideSidebar_module_css_default.list,
-							children: [artifacts.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", {
+							children: [artifacts.length === 0 && (0, react_jsx_runtime.jsx)("li", {
 								className: AsideSidebar_module_css_default.empty,
 								children: t("artifactsEmpty")
-							}), artifacts.map((artifact) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+							}), artifacts.map((artifact) => (0, react_jsx_runtime.jsx)("li", { children: (0, react_jsx_runtime.jsxs)("button", {
 								type: "button",
 								className: AsideSidebar_module_css_default.artifactEntry,
 								title: artifact.path,
@@ -4443,25 +4484,25 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 							}) }, artifact.path))]
 						})]
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+					(0, react_jsx_runtime.jsxs)("section", {
 						className: AsideSidebar_module_css_default.section,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+						children: [(0, react_jsx_runtime.jsxs)("button", {
 							type: "button",
 							className: AsideSidebar_module_css_default.sectionHead,
 							"aria-expanded": open.has("sources"),
 							onClick: () => {
 								toggle("sources");
 							},
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("sourcesTitle") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							children: [(0, react_jsx_runtime.jsx)("span", { children: t("sourcesTitle") }), (0, react_jsx_runtime.jsx)("span", {
 								className: AsideSidebar_module_css_default.count,
 								children: sources.length
 							})]
-						}), open.has("sources") && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("ul", {
+						}), open.has("sources") && (0, react_jsx_runtime.jsxs)("ul", {
 							className: AsideSidebar_module_css_default.list,
-							children: [sources.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", {
+							children: [sources.length === 0 && (0, react_jsx_runtime.jsx)("li", {
 								className: AsideSidebar_module_css_default.empty,
 								children: t("sourcesEmpty")
-							}), sources.map((source) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+							}), sources.map((source) => (0, react_jsx_runtime.jsx)("li", { children: (0, react_jsx_runtime.jsx)("a", {
 								className: AsideSidebar_module_css_default.sourceEntry,
 								href: source.url,
 								title: source.meta ?? source.url,
@@ -4479,19 +4520,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/evan/codebase/deepseek-harness/packages/aside/client-ui-aside/src/client/AsideAskAction.module.css.mjs
-		const css = ".IJTRQW_action{font:inherit;cursor:pointer;color:inherit;background:0 0;border:none;border-radius:4px;justify-content:center;align-items:center;padding:4px;line-height:1;display:inline-flex}.IJTRQW_action:hover,.IJTRQW_action:focus{background:var(--dsw-alias-state-business-weak,#7f7f7f1f);outline:none}.IJTRQW_action:disabled{opacity:.6;cursor:wait}";
-		const tagId = "@deepseek-ai/dsh-client-ui-aside/AsideAskAction.module.css";
+		//#region \0dsh-css:/Users/evan/Desktop/dsh-aside/packages/client-ui-aside/src/client/AsideAskAction.module.css.mjs
+		const css = ".znUWta_action{font:inherit;cursor:pointer;color:inherit;background:0 0;border:none;border-radius:4px;justify-content:center;align-items:center;padding:4px;line-height:1;display:inline-flex}.znUWta_action:hover,.znUWta_action:focus{background:var(--dsw-alias-state-business-weak,#7f7f7f1f);outline:none}.znUWta_action:disabled{opacity:.6;cursor:wait}";
+		const tagId = "@ywzhang1031/dsh-client-ui-aside/AsideAskAction.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-aside";
+			tag.dataset.plugin = "@ywzhang1031/dsh-client-ui-aside";
 			tag.dataset.pluginCss = tagId;
 			tag.textContent = css;
 			document.head.appendChild(tag);
 		}
-		var AsideAskAction_module_css_default = { "action": "IJTRQW_action" };
+		var AsideAskAction_module_css_default = { "action": "znUWta_action" };
 		//#endregion
-		//#region src/client/AsideAskAction.tsx
+		//#region lib/types/client/AsideAskAction.js
 		/**
 		* The per-message aside entry on the stock `conversation.chat.assistant-actions`
 		* strip: one click opens a draft drawer anchored to that assistant message —
@@ -4562,10 +4603,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				sessions
 			]);
 			const label = t("askMessageLabel");
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+			return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label,
 				side: "bottom",
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				children: (0, react_jsx_runtime.jsx)("button", {
 					type: "button",
 					className: AsideAskAction_module_css_default.action,
 					"aria-label": label,
@@ -4578,7 +4619,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			});
 		}
 		//#endregion
-		//#region src/client/locales.ts
+		//#region lib/types/client/locales.js
 		/** Copy dictionaries for the aside drawer, sidebar, and floating action. */
 		/** Simplified Chinese dictionary and key source of truth. */
 		const zh = {
@@ -4631,7 +4672,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			sourcesEmpty: "No web-search sources in this conversation yet."
 		};
 		//#endregion
-		//#region src/client/index.ts
+		//#region lib/types/client/index.js
+		/**
+		* Aside UI plugin, browser half: the frame-wide side-conversation drawer,
+		* the standing Codex-style sidebar (artifacts, sources, aside chats), the
+		* prose-selection watcher with its floating ask button, the per-message
+		* aside action on the stock `conversation.chat.assistant-actions` strip,
+		* and the anchor ledger. A selection is a DRAFT: nothing durable exists
+		* until the first question is actually sent — the durable authority (the
+		* aside session, its fork lineage, its read-only posture) lives in the Host.
+		*
+		* Stock-only wiring: the plugin self-mounts its generated Typert Remote stub
+		* through `ctx.remote.$mount` (the same API `dsh-api-remotes` uses for the
+		* shipped remotes), so no host composition change is needed; session
+		* attribution comes from the runtime sessions service instead of DOM
+		* attributes, which stock renderers do not publish.
+		* @module @deepseek-ai/dsh-client-ui-aside/client
+		*/
 		/** Dictionary namespace owned by this plugin. */
 		const NS = "aside";
 		/** Required services (cordis fiber inject). `remote.aside` is NOT injected: this plugin mounts the stub itself. */

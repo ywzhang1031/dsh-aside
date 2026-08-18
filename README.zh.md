@@ -104,21 +104,35 @@ dsh web
 
 ## 开发
 
-本仓库自带**构建产物**（`lib/`，含 Typert 生成的 Remote 文件），消费端无需构建。源码迭代在 DSH monorepo checkout 内进行（插件依赖 monorepo 的构建工具链）：
+**本仓库完全自构建——不再需要 DeepSeek Harness monorepo。** `pnpm install && pnpm build` 会编译两个包（TypeScript → `lib/types`，tsdown → `lib/*.js`，Typert 生成器重新产出 Remote 产物）；`pnpm test` 运行 42 个测试（host 网关、只读组合、浏览器端的选区/锚点/抽屉/消息级动作/apply 生命周期单测）。
 
 ```sh
-# 1. 克隆 deepseek-harness、安装、先构建一次（见其 README）
-# 2. 在 monorepo 内开发 aside 两包：
-ln -s /path/to/dsh-aside/packages/aside-host  /path/to/deepseek-harness/packages/aside/aside-host
-ln -s /path/to/dsh-aside/packages/client-ui-aside /path/to/deepseek-harness/packages/aside/client-ui-aside
-# 3. 在 monorepo 内跑包测试：
-npx vitest run --config vitest.config.ts packages/aside
-# 4. 重建 lib/ 并把产物提交回本仓库：
-npx tsdown --env.DSH_BUILD_FACE host            # host 包
-(cd packages/aside/client-ui-aside && npx tsdown)  # client bundle
+pnpm install
+pnpm build          # tsc -b + tsdown（+ Typert 代码生成），两个包一起
+pnpm test           # 42 个测试，零 DSH 安装依赖
+npm run pack        # → dist/*.tgz
 ```
 
-测试套件：本仓库 42 个单测——host 网关（血缘、fork seed、只读/never 种子、分类失败）、浏览器端单测（选区、锚点、抽屉、消息级动作、插件 apply 生命周期）——外加 2 个真实组合 e2e（boot 官方 base+web bundle 并断言 aside 的精确工具集；在 DSH monorepo 开发环境内运行，见开发一节）。
+### 在运行的 DSH 上迭代
+
+最快的循环——把插件目录一次性链接进 profile，之后只需重建 + 重启：
+
+```sh
+# 一次性：以目录链接方式安装插件仓库（无需打包）
+dsh plugin add /path/to/dsh-aside/packages/aside-host
+dsh plugin add /path/to/dsh-aside/packages/client-ui-aside
+dsh web
+
+# 每次改动：在本仓库重建，然后重启 dsh web
+pnpm build
+# （浏览器半区的改动免重启热更——webserver 会轮询 lib/client.js）
+```
+
+对外分发走安装章节的流程：`npm run pack` → `dsh plugin add ./dist/*.tgz`。
+
+### 兼容性金丝雀
+
+aside 在官方 base+web 组合上的精确工具集由 2 个 e2e 测试钉死（它们 boot 真实 bundle，存放在 DSH monorepo checkout 内）。改过组合后，发版前请在 monorepo 里重跑它们。
 
 ## 限制与待办
 

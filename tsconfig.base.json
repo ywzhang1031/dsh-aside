@@ -1,0 +1,29 @@
+{
+  // Standalone base for the two plugin packages: mirrors the DeepSeek
+  // Harness monorepo's base compiler options, minus the repo-local path
+  // wildcards — @deepseek-ai/* imports resolve through node_modules
+  // (devDependencies pinned to 0.1.0-rc.7).
+  "compilerOptions": {
+    "target": "es2024",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "sourceMap": true,
+    "declarationMap": true,
+    "composite": true,
+    "incremental": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": false,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node"]
+  }
+}

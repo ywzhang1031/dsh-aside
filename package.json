@@ -9,6 +9,14 @@
     "url": "git+https://github.com/ywzhang1031/dsh-aside.git"
   },
   "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
     "pack": "bash scripts/pack.sh"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "tsdown": "^0.22.2",
+    "vitest": "^4.1.8",
+    "lightningcss": "^1.32.0"
   }
 }

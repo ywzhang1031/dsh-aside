@@ -1,0 +1,6 @@
+packages:
+  - packages/*
+# The plugin's runtime peers are @deepseek-ai/* packages provided by the DSH
+# installation itself (never installed from the registry here). The build
+# compiles against explicit devDependencies pinned to 0.1.0-rc.7, so peers
+autoInstallPeers: true

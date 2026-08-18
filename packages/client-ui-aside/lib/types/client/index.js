@@ -16,7 +16,7 @@
  */
 // The generated Remote stub this plugin mounts itself, and the type-only
 // Remote method surface (ctx.remote.aside) it carries.
-import asideRemote from '@deepseek-ai/dsh-aside-host/remote';
+import asideRemote from '@ywzhang1031/dsh-aside-host/remote';
 import { AnchorStore } from "./anchors.js";
 import { DrawerStore, openingQuestion } from "./drawer-store.js";
 import { SelectionWatcher } from "./selection.js";

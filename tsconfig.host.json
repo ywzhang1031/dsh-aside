@@ -1,0 +1,14 @@
+{
+  // Workspace-root marker + host-face aggregate for the Typert generator
+  // (it walks up to a `tsconfig.host.json` and discovers contributing
+  // packages through its references).
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "references": [
+    {
+      "path": "./packages/aside-host"
+    }
+  ]
+}

@@ -104,21 +104,35 @@ dsh web
 
 ## Development
 
-The standalone repo ships **built artifacts** (`lib/`, including the Typert-generated Remote files), so consumers never build. Source iteration happens inside a DSH monorepo checkout (the packages depend on the monorepo's build tooling):
+**This repo is fully self-building — no DeepSeek Harness monorepo needed.** `pnpm install && pnpm build` compiles both packages (TypeScript → `lib/types`, tsdown → `lib/*.js`, and the Typert generator regenerates the Remote artifacts); `pnpm test` runs the 42-test suite (host gateway, read-only composition, selection/anchors/drawer/ask-action/apply-lifecycle browser units).
 
 ```sh
-# 1. clone deepseek-harness, install, build once (see its README)
-# 2. work on the aside packages inside the monorepo:
-ln -s /path/to/dsh-aside/packages/aside-host  /path/to/deepseek-harness/packages/aside/aside-host
-ln -s /path/to/dsh-aside/packages/client-ui-aside /path/to/deepseek-harness/packages/aside/client-ui-aside
-# 3. run the package tests (all runnable inside the monorepo):
-npx vitest run --config vitest.config.ts packages/aside
-# 4. rebuild lib/ and commit the artifacts back to this repo:
-npx tsdown --env.DSH_BUILD_FACE host            # host packages
-(cd packages/aside/client-ui-aside && npx tsdown)  # client bundle
+pnpm install
+pnpm build          # tsc -b + tsdown (+ Typert codegen) for both packages
+pnpm test           # 42 tests, zero DSH install required
+npm run pack        # → dist/*.tgz
 ```
 
-Test suite: 42 unit tests in this repo — host gateway (lineage, fork seed, read-only/never seeds, classified failures), browser-side units (selection, anchors, drawer, per-message action, plugin apply lifecycle) — plus 2 real-composition e2e tests that boot the shipped base+web bundles and assert the exact aside toolset (run inside a DSH monorepo checkout, see the dev workflow).
+### Iterating on a running DSH
+
+Fastest loop — link the plugin directory into the profile once, then rebuild + restart:
+
+```sh
+# one-time: install the plugin repo as a DIRECTORY link (no packing needed)
+dsh plugin add /path/to/dsh-aside/packages/aside-host
+dsh plugin add /path/to/dsh-aside/packages/client-ui-aside
+dsh web
+
+# every change: rebuild in this repo, then restart dsh web
+pnpm build
+# (browser-half changes hot-reload without restart — the webserver polls lib/client.js)
+```
+
+For distribution, the pack flow is the same as the install section: `npm run pack` → `dsh plugin add ./dist/*.tgz`.
+
+### Compatibility canary
+
+The exact aside toolset on the shipped base+web composition is pinned by 2 e2e tests that live in a DSH monorepo checkout (they boot the real bundles). After editing the composition, re-run them there before tagging a release.
 
 ## Limitations & deferred work
 
