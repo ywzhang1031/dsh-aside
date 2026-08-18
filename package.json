@@ -1,0 +1,14 @@
+{
+  "name": "dsh-aside",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Aside: read-only side conversations (旁注) for stock DeepSeek Harness — a pure-plugin overlay, no source modifications",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ywzhang1031/dsh-aside.git"
+  },
+  "scripts": {
+    "pack": "bash scripts/pack.sh"
+  }
+}

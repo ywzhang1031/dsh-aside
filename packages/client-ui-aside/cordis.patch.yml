@@ -1,0 +1,6 @@
+# Aside UI bundle patch: one additive row over the shipped Web composition.
+# A package declaring `dsh.bundle.patch` joins the profile layer stack when
+# installed with `dsh plugin add`, so this row composes automatically.
+- insert:
+    - id: ui-aside
+      name: '@ywzhang1031/dsh-client-ui-aside'

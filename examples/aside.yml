@@ -1,0 +1,11 @@
+# Manual overlay (alternative to `dsh plugin add`): apply with
+#   dsh web --patch examples/aside.yml
+# Requires the two packages to be installed/available in the profile:
+#   dsh plugin add ./dist/dsh-aside-host-0.1.0.tgz
+#   dsh plugin add ./dist/dsh-client-ui-aside-0.1.0.tgz
+- insert:
+    - id: aside-host
+      name: '@ywzhang1031/dsh-aside-host'
+
+    - id: ui-aside
+      name: '@ywzhang1031/dsh-client-ui-aside'

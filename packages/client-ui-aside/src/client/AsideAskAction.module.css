@@ -1,0 +1,26 @@
+/* Per-message aside action: a compact icon button inside the stock
+   IconActions row, inheriting that row's chrome (message-feedback pattern). */
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+}
+
+.action:hover,
+.action:focus {
+  background: var(--dsw-alias-state-business-weak, rgba(127, 127, 127, 0.12));
+  outline: none;
+}
+
+.action:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
