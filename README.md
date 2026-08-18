@@ -43,6 +43,15 @@ Both seeds are session-log events, so the posture survives restart by replay. Th
 
 Requires a stock [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) installation (web profile). No source modifications.
 
+### Step 0 — install DSH itself from npm (one-time, no monorepo)
+
+```sh
+npm install -g @deepseek-ai/dsh        # latest = 0.1.0-rc.7 — the version this plugin is built against
+dsh --help                             # sanity check (`dsh plugin add` also needs pnpm on PATH)
+```
+
+That's it — no cloning DeepSeek Harness, no building anything. The `dsh` command manages its own profile under `~/.dsh`.
+
 ### Option A — tarballs (recommended, no npm publish needed)
 
 ```sh
@@ -88,9 +97,10 @@ dsh web
 
 ## Compatibility
 
-- Built against DeepSeek Harness `0.1.0-rc.7` (stock `master`).
+- Built against DeepSeek Harness `0.1.0-rc.7` — the npm `latest` (`npm i -g @deepseek-ai/dsh`). Note: individual `@deepseek-ai/*` packages also publish `0.1.0-rc.7`, but some of their `latest` dist-tags still point at old `0.0.1-rc.x` — always install the CLI (`@deepseek-ai/dsh`), whose `latest` is correct, and let it pull the right dependencies.
 - All `@deepseek-ai/*` runtime dependencies are **peer dependencies** resolved from your DSH installation — the plugin never downloads its own copies, so there is no version skew with the DSH's own tool instances.
 - The browser half requires the stock `conversation.chat.assistant-actions` slot (present since the `ui-message-feedback` era) and the `shell.overlay` frame slot.
+- A future DSH release may change APIs; re-verify against each new DSH version (the `dsh plugin add` install fails loudly on peer resolution problems, and the aside toolset e2e is the compatibility canary).
 
 ## Development
 

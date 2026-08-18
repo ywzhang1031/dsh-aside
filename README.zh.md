@@ -43,6 +43,15 @@
 
 需要一个 stock [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 安装（web profile）。无需任何源码修改。
 
+### 第 0 步——用 npm 安装 DSH 本体（一次性，不需要 monorepo）
+
+```sh
+npm install -g @deepseek-ai/dsh        # latest = 0.1.0-rc.7——本插件构建所针对的版本
+dsh --help                             # 确认可用（`dsh plugin add` 还需要 PATH 里有 pnpm）
+```
+
+仅此而已——不用克隆 DeepSeek Harness，不用构建任何东西。`dsh` 命令会在 `~/.dsh` 下自管 profile。
+
 ### 方式 A——tarball（推荐，无需 npm 发布）
 
 ```sh
@@ -88,9 +97,10 @@ dsh web
 
 ## 兼容性
 
-- 针对 DeepSeek Harness `0.1.0-rc.7`（stock `master`）构建。
+- 针对 DeepSeek Harness `0.1.0-rc.7`（npm `latest`，`npm i -g @deepseek-ai/dsh`）构建。注意：个别 `@deepseek-ai/*` 包的 `latest` dist-tag 仍指向很旧的 `0.0.1-rc.x`——请始终安装 CLI（`@deepseek-ai/dsh`，它的 `latest` 是正确的），让它拉取正确的依赖。
 - 所有 `@deepseek-ai/*` 运行时依赖都是 **peer dependency**，由你的 DSH 安装解析——插件不会下载自己的副本，因此不会与 DSH 自身的工具实例产生版本错位。
 - 浏览器半区需要 stock 的 `conversation.chat.assistant-actions` 动作条槽（`ui-message-feedback` 时代起就有）与 `shell.overlay` 框架槽。
+- 未来 DSH 发布新版本可能改动 API；请针对每个新 DSH 版本重新验证（peer 解析失败时 `dsh plugin add` 会大声报错，aside 工具集 e2e 是兼容性金丝雀）。
 
 ## 开发
 
