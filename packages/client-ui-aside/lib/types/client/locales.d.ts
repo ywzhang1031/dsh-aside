@@ -2,14 +2,15 @@
 /** Simplified Chinese dictionary and key source of truth. */
 export declare const zh: {
     title: string;
-    readonlyBadge: string;
     readonlyHint: string;
     askLabel: string;
     askMessageLabel: string;
     draftHint: string;
+    sourceLabel: string;
     loading: string;
     empty: string;
     placeholder: string;
+    commandPlaceholder: string;
     send: string;
     sending: string;
     close: string;
@@ -19,22 +20,34 @@ export declare const zh: {
     sidebarLabel: string;
     asidesTitle: string;
     asidesEmpty: string;
-    artifactsTitle: string;
-    artifactsEmpty: string;
-    sourcesTitle: string;
-    sourcesEmpty: string;
+    asidesLoading: string;
+    modelLabel: string;
+    reasoningLabel: string;
+    readOnlyLabel: string;
+    generating: string;
+    commandHint: string;
+    unknownCommand: string;
+    commandNotAllowed: string;
+    commandError: string;
+    draftNoCommand: string;
+    draftModelCommand: string;
+    backToBottom: string;
+    openAside: string;
+    updatedAt: string;
+    defaultReasoning: string;
 };
 /** English dictionary checked against the Chinese key set. */
 export declare const en: {
     title: string;
-    readonlyBadge: string;
     readonlyHint: string;
     askLabel: string;
     askMessageLabel: string;
     draftHint: string;
+    sourceLabel: string;
     loading: string;
     empty: string;
     placeholder: string;
+    commandPlaceholder: string;
     send: string;
     sending: string;
     close: string;
@@ -44,10 +57,21 @@ export declare const en: {
     sidebarLabel: string;
     asidesTitle: string;
     asidesEmpty: string;
-    artifactsTitle: string;
-    artifactsEmpty: string;
-    sourcesTitle: string;
-    sourcesEmpty: string;
+    asidesLoading: string;
+    modelLabel: string;
+    reasoningLabel: string;
+    readOnlyLabel: string;
+    generating: string;
+    commandHint: string;
+    unknownCommand: string;
+    commandNotAllowed: string;
+    commandError: string;
+    draftNoCommand: string;
+    draftModelCommand: string;
+    backToBottom: string;
+    openAside: string;
+    updatedAt: string;
+    defaultReasoning: string;
 };
 export type AsideLocaleKey = keyof typeof zh;
 //# sourceMappingURL=locales.d.ts.map

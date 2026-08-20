@@ -23,8 +23,18 @@
  * - **Approval** — `approval/policy: never` is seeded beside it, so even the
  *   sandbox escalation channel resolves deterministically to `rejected`.
  *
- * Both seeds ride the session log, so they survive restart by replay — the
- * same delegation pattern the subagent driver uses.
+ * Both seeds ride the session log, so they survive restart by replay.
+ *
+ * ## Persistence of the aside relationship
+ *
+ * The parent link is the child session's durable `parentSession` header. The
+ * full anchor (messageId, exact prose, prefix/suffix disambiguation, offsets)
+ * is encoded into the child's first user message by {@link encodeAnchor} and
+ * therefore lives in the durable child log. {@link AsideGateway.list} recovers
+ * every aside for a parent by listing persisted session headers, filtering on
+ * `parentSession`, and reading each child's first message — no localStorage,
+ * no DSH source patch, no custom session event type (see the module note in
+ * types.ts for why a custom event is not load-survivable on stock 0.1.0-rc.7).
  *
  * The gateway composes everything itself: it needs no agent-preset roster
  * and no deployment configuration, so it runs on a stock DSH deployment with
@@ -78,6 +88,8 @@ import * as ToolFsSearch from '@deepseek-ai/dsh-tool-fs-search';
 import * as ToolWeb from '@deepseek-ai/dsh-tool-web';
 import * as SkillFilesystem from '@deepseek-ai/dsh-skill-filesystem';
 import * as ToolSkill from '@deepseek-ai/dsh-tool-skill';
+import { anchorKey, anchorMessage, anchorSummary, parseAnchor, } from "./types.js";
+export * from "./types.js";
 /** Expected failures, classified so a client can degrade gracefully. */
 export class AsideError extends Error {
     code;
@@ -143,6 +155,13 @@ export function forkSeedOf(events) {
         cut++;
     return events.slice(0, cut);
 }
+/** Extract the plain text of a content-block array (shared projection). */
+function textOfContent(content) {
+    return (Array.isArray(content) ? content : [])
+        .filter((block) => (typeof block === 'object' && block !== null && block.type === 'text'))
+        .map(block => block.text ?? '')
+        .join('\n');
+}
 /**
  * Remote-only gateway service exposing `aside.*` to the browser client.
  * Read the Host registries on every call; nothing is cached, because the
@@ -152,33 +171,66 @@ let AsideGateway = (() => {
     let _classSuper = TypertRemoteService;
     let _instanceExtraInitializers = [];
     let _create_decorators;
+    let _list_decorators;
     return class AsideGateway extends _classSuper {
         static {
             const _metadata = typeof Symbol === "function" && Symbol.metadata ? Object.create(_classSuper[Symbol.metadata] ?? null) : void 0;
             _create_decorators = [Remote('create')];
+            _list_decorators = [Remote('list')];
             __esDecorate(this, null, _create_decorators, { kind: "method", name: "create", static: false, private: false, access: { has: obj => "create" in obj, get: obj => obj.create }, metadata: _metadata }, null, _instanceExtraInitializers);
+            __esDecorate(this, null, _list_decorators, { kind: "method", name: "list", static: false, private: false, access: { has: obj => "list" in obj, get: obj => obj.list }, metadata: _metadata }, null, _instanceExtraInitializers);
             if (_metadata) Object.defineProperty(this, Symbol.metadata, { enumerable: true, configurable: true, writable: true, value: _metadata });
         }
-        static inject = ['agents'];
+        static inject = ['agents', 'sessions'];
         compose = __runInitializers(this, _instanceExtraInitializers);
+        /** One in-flight create per durable parent + full-anchor identity. */
+        creations = new Map();
         constructor(ctx, config = {}) {
             super(ctx, 'aside');
             this.compose = config.compose ?? composeReadOnlyWorld;
         }
         /**
          * Create one read-only side conversation under a parent session, forked
-         * from the parent's completed-turn history.
-         * @param request - the parent conversation identity.
-         * @returns the new session id.
+         * from the parent's completed-turn history, and return its durable record.
+         * @param request - the parent conversation identity plus the anchor.
+         * @returns the full durable record.
          * @throws {@link AsideError} when the parent is unknown.
          */
         async create(request) {
             const parentId = SessionId(request.parentSessionId);
+            const key = `${parentId}\u0000${anchorKey(request.anchor)}`;
+            const active = this.creations.get(key);
+            if (active !== undefined)
+                return { record: await active };
+            const creating = this.createRecord(parentId, request);
+            this.creations.set(key, creating);
+            try {
+                return { record: await creating };
+            }
+            finally {
+                if (this.creations.get(key) === creating)
+                    this.creations.delete(key);
+            }
+        }
+        /** Create or durably recover the single child for one parent + anchor. */
+        async createRecord(parentId, request) {
             const parent = this.ctx.agents.get(parentId);
             const parentHeader = parent?.session.header
                 ?? await this.coldHeader(parentId);
             if (parentHeader === undefined) {
                 throw new AsideError('parent-not-found', `aside: parent session "${request.parentSessionId}" was not found`);
+            }
+            // Idempotency: a repeated create for the same anchor returns the existing
+            // aside instead of minting a duplicate side conversation.
+            const existing = await this.findExisting(parentId, request.anchor);
+            if (existing !== undefined) {
+                // A previous flush may have failed after the child was created. Reusing
+                // the live child and retrying the durability barrier prevents an orphan
+                // from turning into a second child on the caller's retry.
+                const live = this.ctx.agents.get(SessionId(existing.subSessionId));
+                if (live !== undefined)
+                    await this.ctx.sessions.flush(live.session);
+                return existing;
             }
             const subSessionId = SessionId(`aside-${randomUUID()}`);
             const inheritedRoute = parent === undefined
@@ -192,6 +244,7 @@ let AsideGateway = (() => {
                 // Inherit the parent's route so the side conversation answers with the
                 // same model the user is already talking to; a cold parent (or one
                 // without a recorded route) falls back to the deployment defaults.
+                // Reasoning effort rides the fork seed's `request/header` event.
                 ...inheritedRoute === undefined ? {} : { agentOptions: inheritedRoute },
                 // The fork seed carries the parent's completed-turn history, so the
                 // aside reads the main conversation's state; a parent with no completed
@@ -212,7 +265,129 @@ let AsideGateway = (() => {
             // closed by the approval policy, and the sandbox itself is OS-level).
             setSandboxMode(agent.session, 'read-only');
             setApprovalPolicy(agent.session, 'never');
-            return { sessionId: subSessionId };
+            // Persist the anchor atomically with the child: append the anchor marker
+            // as the child's first user message NOW, so a failed or retried client
+            // prompt never leaves an anchor-less orphan, and `aside.list` can recover
+            // the relationship from durable storage alone.
+            agent.session.append('user/message', {
+                id: `aside-anchor-${subSessionId}`,
+                role: 'user',
+                content: [{ type: 'text', text: anchorMessage(request.anchor) }],
+                source: { kind: 'user' },
+            }, { surfaceOp: 'append' });
+            // Best-effort human title (cosmetic in the stock session list).
+            const summary = anchorSummary(request.anchor.exact, 40);
+            try {
+                const titleService = this.ctx.get('sessionTitle');
+                titleService?.rename(agent.session, summary);
+            }
+            catch {
+                // A missing or refused title service never blocks aside creation.
+            }
+            // Flush the seed + anchor + title so the relationship is durable before
+            // the client sends the first question. A failed durability barrier is a
+            // failed create: the caller may retry, and findExisting reuses this live
+            // child instead of minting another one.
+            await this.ctx.sessions.flush(agent.session);
+            const record = this.recordFromEvents(agent.session.header, parentId, agent.session.events);
+            if (record === undefined)
+                throw new Error('aside: created child has no recoverable anchor');
+            return record;
+        }
+        /**
+         * List every aside hanging off one parent conversation, recovered from
+         * durable storage (or, without persistence, the live agent registry).
+         * @param request - the parent conversation identity.
+         * @returns records sorted by updatedAt descending.
+         */
+        async list(request) {
+            const parentId = SessionId(request.parentSessionId);
+            const persistence = this.ctx.get('sessionPersistence');
+            if (persistence !== undefined) {
+                try {
+                    const headers = await persistence.list();
+                    const children = headers.filter(header => header.parentSession === parentId);
+                    const records = [];
+                    for (const header of children) {
+                        const record = await this.recordFromChild(header, parentId, persistence);
+                        if (record !== undefined)
+                            records.push(record);
+                    }
+                    return { records: records.sort((left, right) => right.updatedAt - left.updatedAt) };
+                }
+                catch (error) {
+                    console.warn('[aside] persistence list failed, falling back to live agents:', error);
+                }
+            }
+            return { records: this.recordsFromLiveAgents(parentId) };
+        }
+        /** Recover one child's record from its durable header + first message. */
+        async recordFromChild(header, parentId, persistence) {
+            try {
+                const inspected = await persistence.inspect(header.id);
+                return this.recordFromEvents(header, parentId, inspected.events);
+            }
+            catch {
+                // A corrupt or unreadable child is skipped; the client must not crash.
+                return undefined;
+            }
+        }
+        /**
+         * Fold one child's OWN events into a record, or undefined when it carries
+         * no anchor. Only the child's own events (at or past `seedLength`) are
+         * considered — a nested aside inherits its parent's log (which may itself
+         * contain an ancestor's anchor marker), and a user's own text may contain a
+         * marker-like string. The anchor is therefore read from the FIRST own user
+         * message, never from inherited history or later user text.
+         */
+        recordFromEvents(header, parentId, events) {
+            const seedLength = header.seedLength ?? 0;
+            let anchor;
+            let firstOwnUserSeen = false;
+            let updatedAt = header.createdAt;
+            for (const event of events) {
+                if (event.seq < seedLength)
+                    continue;
+                if (event.time > updatedAt)
+                    updatedAt = event.time;
+                if (!firstOwnUserSeen && event.type === 'user/message') {
+                    firstOwnUserSeen = true;
+                    const text = textOfContent(event.data.content);
+                    anchor = parseAnchor(text);
+                }
+            }
+            if (anchor === undefined)
+                return undefined;
+            return {
+                schemaVersion: 1,
+                parentSessionId: parentId,
+                subSessionId: header.id,
+                anchor,
+                createdAt: header.createdAt,
+                updatedAt,
+            };
+        }
+        /** Fallback listing from the live agent registry (process-local, no persistence). */
+        recordsFromLiveAgents(parentId) {
+            const records = [];
+            for (const agent of this.ctx.agents.list()) {
+                const header = agent.session.header;
+                if (header.parentSession !== parentId)
+                    continue;
+                const record = this.recordFromEvents(header, parentId, agent.session.events);
+                if (record !== undefined)
+                    records.push(record);
+            }
+            return records.sort((left, right) => right.updatedAt - left.updatedAt);
+        }
+        /** Idempotency lookup: an existing aside for the exact same anchor, if any. */
+        async findExisting(parentId, anchor) {
+            const key = anchorKey(anchor);
+            const live = this.recordsFromLiveAgents(parentId).find(record => anchorKey(record.anchor) === key);
+            if (live !== undefined)
+                return live;
+            const { records } = await this.list({ parentSessionId: parentId });
+            return records.find(record => anchorKey(record.anchor) === key);
         }
         /** Read one cold session's stored header through the optional persistence backend. */
         async coldHeader(sessionId) {

@@ -1,13 +1,14 @@
 /**
- * Codex-style frame sidebar: a standing right rail with three sections —
- * produced files, web-search sources, and the aside chats anchored into the
- * current main conversation. Artifacts open through the Host path opener;
- * sources open in a new tab; aside entries reopen their side conversation in
- * the drawer (the same target as an inline anchor click).
+ * Frame sidebar: a standing right rail listing the aside chats anchored into
+ * the current main conversation. Each entry opens its side conversation in
+ * the drawer and locates the parent message. The list comes from the Host
+ * repository cache (no localStorage, no history polling); switching the
+ * parent session triggers one `aside.list` refresh.
  * @module @ywzhang1031/dsh-client-ui-aside/AsideSidebar
  */
-import type { IApiClient } from '@deepseek-ai/dsh-client-connection/client';
-import { AnchorStore, type AsideAnchor } from './anchors.ts';
+import type { AsideRecord } from '@ywzhang1031/dsh-aside-host/types';
+import { AsideRepository } from './repository.ts';
+import { DrawerStore } from './drawer-store.ts';
 import type { AsideLocaleKey } from './locales.ts';
 /** The current session + list observable the sidebar derives from. */
 export interface AsideSidebarSessions {
@@ -15,16 +16,18 @@ export interface AsideSidebarSessions {
     getCurrent(): string | null;
 }
 export interface AsideSidebarProps {
-    /** The plugin-owned anchor ledger (aside chat entries per session). */
-    anchors: AnchorStore;
+    /** The plugin-owned Host-backed aside cache. */
+    repository: AsideRepository;
+    /** Drawer state, used to mark the currently open aside row. */
+    drawer: DrawerStore;
     /** Current-session observable (the runtime sessions service). */
     sessions: AsideSidebarSessions;
-    /** Shared connection API client (history reads, host path opener). */
-    api: IApiClient;
-    /** Reopen one existing aside in the drawer. */
-    onOpenAside: (anchor: AsideAnchor) => void;
+    /** Reopen one existing aside (open drawer + locate parent message). */
+    onOpenAside: (record: AsideRecord) => void;
     /** Locale binder for this surface's dictionary. */
     t: (key: AsideLocaleKey, vars?: Record<string, string>) => string;
 }
-export declare function AsideSidebar({ anchors, sessions, api, onOpenAside, t }: AsideSidebarProps): React.ReactNode;
+/** Compact locale-aware timestamp for one sidebar row. */
+export declare function formatAsideTime(timestamp: number): string;
+export declare function AsideSidebar({ repository, drawer, sessions, onOpenAside, t }: AsideSidebarProps): React.ReactNode;
 //# sourceMappingURL=AsideSidebar.d.ts.map

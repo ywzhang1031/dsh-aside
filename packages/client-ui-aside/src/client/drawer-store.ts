@@ -2,9 +2,14 @@
  * Drawer open-state store: which side conversation the overlay shows, or a
  * pending draft that only becomes a real aside once the user actually sends
  * a question. A closed unanswered draft leaves nothing behind — no session,
- * no anchor, no highlight.
+ * no anchor, no highlight. The full {@link AsideAnchor} is carried so the
+ * first send can hand it to `aside.create`; the Host (not the client)
+ * persists it into the child's first message.
  * @module @ywzhang1031/dsh-client-ui-aside/drawer-store
  */
+
+import type { AsideAnchor, AsideRecord } from '@ywzhang1031/dsh-aside-host/types'
+import { anchorKey } from '@ywzhang1031/dsh-aside-host/types'
 
 /** Immutable snapshot the drawer component renders. */
 export interface DrawerState {
@@ -12,34 +17,28 @@ export interface DrawerState {
   subSessionId: string | null
   /** The main conversation the aside hangs off (for display and return). */
   parentSessionId: string | null
-  /** The selected text this side conversation answers (title + anchor). */
-  anchorText: string
-  /** The selected span's message identity — only recorded once asked. */
-  messageId: string | null
+  /** The selected span this side conversation answers. */
+  anchor: AsideAnchor | null
   /** True until the first send: nothing durable exists yet. */
   draft: boolean
   /** Creation/loading error surfaced in the drawer, or null. */
   error: string | null
+  /** The full durable record, once created or reopened. */
+  record: AsideRecord | null
 }
 
 const CLOSED: DrawerState = {
   subSessionId: null,
   parentSessionId: null,
-  anchorText: '',
-  messageId: null,
+  anchor: null,
   draft: false,
   error: null,
-}
-
-/** Build the opening question: the user's input plus the anchored source text. */
-export function openingQuestion(input: string, anchorText: string): string {
-  const trimmed = input.trim()
-  if (trimmed === '') return ''
-  return `${trimmed}\n\n---\n引用原文：\n${anchorText}`
+  record: null,
 }
 
 export class DrawerStore {
   private state: DrawerState = CLOSED
+  private version = 0
   private readonly listeners = new Set<() => void>()
 
   get(): DrawerState {
@@ -47,39 +46,61 @@ export class DrawerStore {
   }
 
   /**
+   * Monotonic counter bumped on every state transition. Callers capture it
+   * before an async first-send and re-check it afterwards so a drawer that was
+   * closed/reopened mid-flight never gets bound to the wrong anchor.
+   */
+  getVersion(): number {
+    return this.version
+  }
+
+  /**
    * Open a fresh draft: the drawer shows an empty composer bound to one
    * selection. Nothing durable is created until the first send succeeds.
    */
-  openDraft(next: { parentSessionId: string; anchorText: string; messageId: string | null }): void {
+  openDraft(next: { parentSessionId: string; anchor: AsideAnchor }): void {
     this.state = {
       subSessionId: null,
       parentSessionId: next.parentSessionId,
-      anchorText: next.anchorText,
-      messageId: next.messageId,
+      anchor: next.anchor,
       draft: true,
       error: null,
+      record: null,
     }
     this.notify()
   }
 
   /** Open the drawer on one existing aside (anchor or sidebar entry click). */
-  openSub(next: { subSessionId: string; parentSessionId: string; anchorText: string }): void {
+  openSub(record: AsideRecord): void {
     this.state = {
-      subSessionId: next.subSessionId,
-      parentSessionId: next.parentSessionId,
-      anchorText: next.anchorText,
-      messageId: null,
+      subSessionId: record.subSessionId,
+      parentSessionId: record.parentSessionId,
+      anchor: record.anchor,
       draft: false,
       error: null,
+      record,
     }
     this.notify()
   }
 
-  /** Bind the draft to the aside created by its first send. */
-  attach(subSessionId: string): void {
-    if (this.state.subSessionId !== null || !this.state.draft) return
-    this.state = { ...this.state, subSessionId, draft: false, error: null }
+  /** Bind the exact Host record to the draft that initiated its first send. */
+  attach(record: AsideRecord, expectedVersion: number): boolean {
+    if (this.version !== expectedVersion
+      || this.state.subSessionId !== null
+      || !this.state.draft
+      || this.state.anchor === null
+      || this.state.parentSessionId !== record.parentSessionId
+      || anchorKey(this.state.anchor) !== anchorKey(record.anchor)) return false
+    this.state = {
+      subSessionId: record.subSessionId,
+      parentSessionId: record.parentSessionId,
+      anchor: record.anchor,
+      draft: false,
+      error: null,
+      record,
+    }
     this.notify()
+    return true
   }
 
   close(): void {
@@ -89,8 +110,13 @@ export class DrawerStore {
   }
 
   setError(message: string): void {
-    if (this.state.subSessionId !== null && !this.state.draft) return
     this.state = { ...this.state, error: message }
+    this.notify()
+  }
+
+  clearError(): void {
+    if (this.state.error === null) return
+    this.state = { ...this.state, error: null }
     this.notify()
   }
 
@@ -100,6 +126,7 @@ export class DrawerStore {
   }
 
   private notify(): void {
+    this.version += 1
     for (const listener of [...this.listeners]) {
       try {
         listener()

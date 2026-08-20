@@ -1,23 +1,24 @@
 /**
  * Prose-selection watcher: detects a text selection in the conversation
  * surface, floats an "ask about this" button above it, and hands the
- * resolved selection context to the plugin's opener. Stock renderers publish
- * no message-level DOM identity, so the watcher attributes the selection to
- * the CURRENT session from the runtime sessions service; message identity is
- * left to the per-message aside action on the assistant-actions strip, which
- * receives the stock `messageId`. The watcher stays outside the React tree
- * entirely.
+ * resolved selection context (including a quote-selector anchor) to the
+ * plugin's opener. Message identity is resolved separately via
+ * {@link resolveMessageId} (history matching) because stock renders the
+ * assistant-actions strip in a sibling node of the message text. The watcher
+ * stays outside the React tree entirely.
  * @module @ywzhang1031/dsh-client-ui-aside/selection
  */
+
+import type { AsideAnchor } from '@ywzhang1031/dsh-aside-host/types'
+import { buildQuote, normalizeText } from './quote.ts'
+import { chatAnchorRow } from './message-dom-registry.ts'
 
 /** What the watcher resolved from one browser selection. */
 export interface SelectionContext {
   /** The main conversation the selection lives in (current session). */
   sessionId: string
-  /** Message identity, when the surface published one (stock: null). */
-  messageId: string | null
-  /** The selected text, trimmed (watcher bounds: non-empty, ≤ maxChars). */
-  text: string
+  /** The selected span, with quote-selector disambiguation fields. */
+  anchor: AsideAnchor
   /** Viewport rect of the selection, for floating-button placement. */
   rect: DOMRect
 }
@@ -30,9 +31,9 @@ const BUTTON_CLASS = 'aside-ask-button'
 
 /**
  * Resolve one browser selection to a {@link SelectionContext}, or undefined
- * when it is empty, out of bounds, or no session is current. The session is
- * the runtime's current one: selections happen in the conversation the user
- * is viewing.
+ * when it is empty, out of bounds, or no session is current. The anchor's
+ * `messageId` starts null; the opener resolves it from history before the
+ * aside is created.
  */
 export function resolveSelection(
   doc: Document,
@@ -42,14 +43,25 @@ export function resolveSelection(
   const selection = doc.getSelection()
   if (selection === null || selection.rangeCount === 0 || selection.isCollapsed) return undefined
   const range = selection.getRangeAt(0)
-  const text = range.toString().trim()
-  if (text.length < MIN_SELECTION_CHARS || text.length > MAX_SELECTION_CHARS) return undefined
+  const exact = range.toString()
+  if (exact.trim().length < MIN_SELECTION_CHARS || exact.trim().length > MAX_SELECTION_CHARS) return undefined
 
   const start = range.startContainer
   const messageEl = start.nodeType === Node.ELEMENT_NODE
     ? (start as Element)
     : start.parentElement
   if (messageEl === null) return undefined
+
+  const row = chatAnchorRow(start)
+  const quote = row === null ? null : buildQuote(row, range)
+  const anchor: AsideAnchor = {
+    messageId: null,
+    exact,
+    prefix: quote?.prefix ?? '',
+    suffix: quote?.suffix ?? '',
+    occurrence: quote?.occurrence ?? null,
+    startOffset: quote?.startOffset ?? null,
+  }
 
   // A collapsed-offscreen selection reports a zero rect (and jsdom supplies
   // no range geometry at all); position the button at the message element
@@ -61,7 +73,44 @@ export function resolveSelection(
   } catch {
     rect = messageEl.getBoundingClientRect()
   }
-  return { sessionId: currentSessionId, messageId: null, text, rect }
+  return { sessionId: currentSessionId, anchor, rect }
+}
+
+/** Extract the plain text of a content-block array. */
+function textOfContent(content: unknown): string {
+  return (Array.isArray(content) ? content : [])
+    .filter((block): block is { type: string; text?: string } => (
+      typeof block === 'object' && block !== null && (block as { type?: unknown }).type === 'text'
+    ))
+    .map(block => block.text ?? '')
+    .join('\n')
+}
+
+/**
+ * Resolve the unique assistant message a selected span belongs to by matching
+ * its normalized text against the session history. Returns the messageId only
+ * when exactly one assistant message contains the span; ambiguity or absence
+ * yields null (the aside still works message-less).
+ */
+export function resolveMessageId(
+  entries: readonly { event: { type: string; data?: unknown } }[],
+  exact: string,
+): string | null {
+  const needle = normalizeText(exact)
+  if (needle === '') return null
+  let found: string | null = null
+  let count = 0
+  for (const entry of entries) {
+    const event = entry.event
+    if (event.type !== 'assistant/message') continue
+    const data = event.data as { message?: { id?: unknown; content?: unknown } } | undefined
+    if (typeof data?.message?.id !== 'string') continue
+    if (normalizeText(textOfContent(data.message.content)).includes(needle)) {
+      found = data.message.id
+      count += 1
+    }
+  }
+  return count === 1 ? found : null
 }
 
 /**
@@ -87,8 +136,6 @@ export class SelectionWatcher {
     this.doc.addEventListener('selectionchange', onSelection)
     this.doc.addEventListener('mouseup', onSelection)
     this.doc.addEventListener('mousedown', (event) => {
-      // A click away from the button (its own click is handled by the button)
-      // hides it; the button removes itself on activation.
       if (this.button !== null && event.target instanceof Node && !this.button.contains(event.target)) {
         this.hide()
       }
@@ -130,8 +177,7 @@ export class SelectionWatcher {
     const changed = selection === undefined
       || active === null
       || active.sessionId !== selection.sessionId
-      || active.messageId !== selection.messageId
-      || active.text !== selection.text
+      || active.anchor.exact !== selection.anchor.exact
     if (!changed) return
     this.active = selection ?? null
     if (selection === undefined) {

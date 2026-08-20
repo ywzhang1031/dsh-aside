@@ -2,29 +2,34 @@
  * Drawer open-state store: which side conversation the overlay shows, or a
  * pending draft that only becomes a real aside once the user actually sends
  * a question. A closed unanswered draft leaves nothing behind — no session,
- * no anchor, no highlight.
+ * no anchor, no highlight. The full {@link AsideAnchor} is carried so the
+ * first send can hand it to `aside.create`; the Host (not the client)
+ * persists it into the child's first message.
  * @module @ywzhang1031/dsh-client-ui-aside/drawer-store
  */
+import { anchorKey } from '@ywzhang1031/dsh-aside-host/types';
 const CLOSED = {
     subSessionId: null,
     parentSessionId: null,
-    anchorText: '',
-    messageId: null,
+    anchor: null,
     draft: false,
     error: null,
+    record: null,
 };
-/** Build the opening question: the user's input plus the anchored source text. */
-export function openingQuestion(input, anchorText) {
-    const trimmed = input.trim();
-    if (trimmed === '')
-        return '';
-    return `${trimmed}\n\n---\n引用原文：\n${anchorText}`;
-}
 export class DrawerStore {
     state = CLOSED;
+    version = 0;
     listeners = new Set();
     get() {
         return this.state;
+    }
+    /**
+     * Monotonic counter bumped on every state transition. Callers capture it
+     * before an async first-send and re-check it afterwards so a drawer that was
+     * closed/reopened mid-flight never gets bound to the wrong anchor.
+     */
+    getVersion() {
+        return this.version;
     }
     /**
      * Open a fresh draft: the drawer shows an empty composer bound to one
@@ -34,31 +39,44 @@ export class DrawerStore {
         this.state = {
             subSessionId: null,
             parentSessionId: next.parentSessionId,
-            anchorText: next.anchorText,
-            messageId: next.messageId,
+            anchor: next.anchor,
             draft: true,
             error: null,
+            record: null,
         };
         this.notify();
     }
     /** Open the drawer on one existing aside (anchor or sidebar entry click). */
-    openSub(next) {
+    openSub(record) {
         this.state = {
-            subSessionId: next.subSessionId,
-            parentSessionId: next.parentSessionId,
-            anchorText: next.anchorText,
-            messageId: null,
+            subSessionId: record.subSessionId,
+            parentSessionId: record.parentSessionId,
+            anchor: record.anchor,
             draft: false,
             error: null,
+            record,
         };
         this.notify();
     }
-    /** Bind the draft to the aside created by its first send. */
-    attach(subSessionId) {
-        if (this.state.subSessionId !== null || !this.state.draft)
-            return;
-        this.state = { ...this.state, subSessionId, draft: false, error: null };
+    /** Bind the exact Host record to the draft that initiated its first send. */
+    attach(record, expectedVersion) {
+        if (this.version !== expectedVersion
+            || this.state.subSessionId !== null
+            || !this.state.draft
+            || this.state.anchor === null
+            || this.state.parentSessionId !== record.parentSessionId
+            || anchorKey(this.state.anchor) !== anchorKey(record.anchor))
+            return false;
+        this.state = {
+            subSessionId: record.subSessionId,
+            parentSessionId: record.parentSessionId,
+            anchor: record.anchor,
+            draft: false,
+            error: null,
+            record,
+        };
         this.notify();
+        return true;
     }
     close() {
         if (this.state === CLOSED)
@@ -67,9 +85,13 @@ export class DrawerStore {
         this.notify();
     }
     setError(message) {
-        if (this.state.subSessionId !== null && !this.state.draft)
-            return;
         this.state = { ...this.state, error: message };
+        this.notify();
+    }
+    clearError() {
+        if (this.state.error === null)
+            return;
+        this.state = { ...this.state, error: null };
         this.notify();
     }
     subscribe(listener) {
@@ -77,6 +99,7 @@ export class DrawerStore {
         return () => { this.listeners.delete(listener); };
     }
     notify() {
+        this.version += 1;
         for (const listener of [...this.listeners]) {
             try {
                 listener();

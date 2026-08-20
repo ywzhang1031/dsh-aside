@@ -92,6 +92,13 @@ window.__ModuleLoader__.load({
 			const end = source.endsWith("$") ? source.length - 1 : source.length;
 			return source.slice(start, end);
 		}
+		function floatSafeRemainder(val, step) {
+			const ratio = val / step;
+			const roundedRatio = Math.round(ratio);
+			const tolerance = Number.EPSILON * Math.max(Math.abs(ratio), 1);
+			if (Math.abs(ratio - roundedRatio) < tolerance) return 0;
+			return ratio - roundedRatio;
+		}
 		const EVALUATING = /* @__PURE__*/ Symbol("evaluating");
 		function defineLazy(object, key, getter) {
 			let value = void 0;
@@ -196,7 +203,13 @@ window.__ModuleLoader__.load({
 				return shape[k]._zod.optin === "optional" && shape[k]._zod.optout === "optional";
 			});
 		}
-		Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, -Number.MAX_VALUE, Number.MAX_VALUE;
+		const NUMBER_FORMAT_RANGES = {
+			safeint: [Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+			int32: [-2147483648, 2147483647],
+			uint32: [0, 4294967295],
+			float32: [-34028234663852886e22, 34028234663852886e22],
+			float64: [-Number.MAX_VALUE, Number.MAX_VALUE]
+		};
 		function pick(schema, mask) {
 			const currDef = schema._zod.def;
 			const checks = currDef.checks;
@@ -599,6 +612,8 @@ window.__ModuleLoader__.load({
 			const regex = params ? `[\\s\\S]{${params?.minimum ?? 0},${params?.maximum ?? ""}}` : `[\\s\\S]*`;
 			return new RegExp(`^${regex}$`);
 		};
+		const integer = /^-?\d+$/;
+		const number$1 = /^-?\d+(?:\.\d+)?$/;
 		const lowercase = /^[^A-Z]*$/;
 		const uppercase = /^[^a-z]*$/;
 		//#endregion
@@ -608,6 +623,149 @@ window.__ModuleLoader__.load({
 			inst._zod ?? (inst._zod = {});
 			inst._zod.def = def;
 			(_a = inst._zod).onattach ?? (_a.onattach = []);
+		});
+		const numericOriginMap = {
+			number: "number",
+			bigint: "bigint",
+			object: "date"
+		};
+		const $ZodCheckLessThan = /*@__PURE__*/ $constructor("$ZodCheckLessThan", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			const origin = numericOriginMap[typeof def.value];
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				const curr = (def.inclusive ? bag.maximum : bag.exclusiveMaximum) ?? Number.POSITIVE_INFINITY;
+				if (def.value < curr) {
+					if (def.inclusive) bag.maximum = def.value;
+					else bag.exclusiveMaximum = def.value;
+				}
+			});
+			inst._zod.check = (payload) => {
+				if (def.inclusive ? payload.value <= def.value : payload.value < def.value) return;
+				payload.issues.push({
+					origin,
+					code: "too_big",
+					maximum: typeof def.value === "object" ? def.value.getTime() : def.value,
+					input: payload.value,
+					inclusive: def.inclusive,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckGreaterThan = /*@__PURE__*/ $constructor("$ZodCheckGreaterThan", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			const origin = numericOriginMap[typeof def.value];
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				const curr = (def.inclusive ? bag.minimum : bag.exclusiveMinimum) ?? Number.NEGATIVE_INFINITY;
+				if (def.value > curr) {
+					if (def.inclusive) bag.minimum = def.value;
+					else bag.exclusiveMinimum = def.value;
+				}
+			});
+			inst._zod.check = (payload) => {
+				if (def.inclusive ? payload.value >= def.value : payload.value > def.value) return;
+				payload.issues.push({
+					origin,
+					code: "too_small",
+					minimum: typeof def.value === "object" ? def.value.getTime() : def.value,
+					input: payload.value,
+					inclusive: def.inclusive,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckMultipleOf = /*@__PURE__*/ $constructor("$ZodCheckMultipleOf", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			inst._zod.onattach.push((inst) => {
+				var _a;
+				(_a = inst._zod.bag).multipleOf ?? (_a.multipleOf = def.value);
+			});
+			inst._zod.check = (payload) => {
+				if (typeof payload.value !== typeof def.value) throw new Error("Cannot mix number and bigint in multiple_of check.");
+				if (typeof payload.value === "bigint" ? payload.value % def.value === BigInt(0) : floatSafeRemainder(payload.value, def.value) === 0) return;
+				payload.issues.push({
+					origin: typeof payload.value,
+					code: "not_multiple_of",
+					divisor: def.value,
+					input: payload.value,
+					inst,
+					continue: !def.abort
+				});
+			};
+		});
+		const $ZodCheckNumberFormat = /*@__PURE__*/ $constructor("$ZodCheckNumberFormat", (inst, def) => {
+			$ZodCheck.init(inst, def);
+			def.format = def.format || "float64";
+			const isInt = def.format?.includes("int");
+			const origin = isInt ? "int" : "number";
+			const [minimum, maximum] = NUMBER_FORMAT_RANGES[def.format];
+			inst._zod.onattach.push((inst) => {
+				const bag = inst._zod.bag;
+				bag.format = def.format;
+				bag.minimum = minimum;
+				bag.maximum = maximum;
+				if (isInt) bag.pattern = integer;
+			});
+			inst._zod.check = (payload) => {
+				const input = payload.value;
+				if (isInt) {
+					if (!Number.isInteger(input)) {
+						payload.issues.push({
+							expected: origin,
+							format: def.format,
+							code: "invalid_type",
+							continue: false,
+							input,
+							inst
+						});
+						return;
+					}
+					if (!Number.isSafeInteger(input)) {
+						if (input > 0) payload.issues.push({
+							input,
+							code: "too_big",
+							maximum: Number.MAX_SAFE_INTEGER,
+							note: "Integers must be within the safe integer range.",
+							inst,
+							origin,
+							inclusive: true,
+							continue: !def.abort
+						});
+						else payload.issues.push({
+							input,
+							code: "too_small",
+							minimum: Number.MIN_SAFE_INTEGER,
+							note: "Integers must be within the safe integer range.",
+							inst,
+							origin,
+							inclusive: true,
+							continue: !def.abort
+						});
+						return;
+					}
+				}
+				if (input < minimum) payload.issues.push({
+					origin: "number",
+					input,
+					code: "too_small",
+					minimum,
+					inclusive: true,
+					inst,
+					continue: !def.abort
+				});
+				if (input > maximum) payload.issues.push({
+					origin: "number",
+					input,
+					code: "too_big",
+					maximum,
+					inclusive: true,
+					inst,
+					continue: !def.abort
+				});
+			};
 		});
 		const $ZodCheckMaxLength = /*@__PURE__*/ $constructor("$ZodCheckMaxLength", (inst, def) => {
 			var _a;
@@ -1230,6 +1388,30 @@ window.__ModuleLoader__.load({
 				});
 			};
 		});
+		const $ZodNumber = /*@__PURE__*/ $constructor("$ZodNumber", (inst, def) => {
+			$ZodType.init(inst, def);
+			inst._zod.pattern = inst._zod.bag.pattern ?? number$1;
+			inst._zod.parse = (payload, _ctx) => {
+				if (def.coerce) try {
+					payload.value = Number(payload.value);
+				} catch (_) {}
+				const input = payload.value;
+				if (typeof input === "number" && !Number.isNaN(input) && Number.isFinite(input)) return payload;
+				const received = typeof input === "number" ? Number.isNaN(input) ? "NaN" : !Number.isFinite(input) ? "Infinity" : void 0 : void 0;
+				payload.issues.push({
+					expected: "number",
+					code: "invalid_type",
+					input,
+					inst,
+					...received ? { received } : {}
+				});
+				return payload;
+			};
+		});
+		const $ZodNumberFormat = /*@__PURE__*/ $constructor("$ZodNumberFormat", (inst, def) => {
+			$ZodCheckNumberFormat.init(inst, def);
+			$ZodNumber.init(inst, def);
+		});
 		const $ZodUnknown = /*@__PURE__*/ $constructor("$ZodUnknown", (inst, def) => {
 			$ZodType.init(inst, def);
 			inst._zod.parse = (payload) => payload;
@@ -1685,6 +1867,24 @@ window.__ModuleLoader__.load({
 				payload.issues.push({
 					code: "invalid_value",
 					values,
+					input,
+					inst
+				});
+				return payload;
+			};
+		});
+		const $ZodLiteral = /*@__PURE__*/ $constructor("$ZodLiteral", (inst, def) => {
+			$ZodType.init(inst, def);
+			if (def.values.length === 0) throw new Error("Cannot create literal schema with no valid values");
+			const values = new Set(def.values);
+			inst._zod.values = values;
+			inst._zod.pattern = new RegExp(`^(${def.values.map((o) => typeof o === "string" ? escapeRegex(o) : o ? escapeRegex(o.toString()) : String(o)).join("|")})$`);
+			inst._zod.parse = (payload, _ctx) => {
+				const input = payload.value;
+				if (values.has(input)) return payload;
+				payload.issues.push({
+					code: "invalid_value",
+					values: def.values,
 					input,
 					inst
 				});
@@ -2244,6 +2444,24 @@ window.__ModuleLoader__.load({
 			});
 		}
 		// @__NO_SIDE_EFFECTS__
+		function _number(Class, params) {
+			return new Class({
+				type: "number",
+				checks: [],
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _int(Class, params) {
+			return new Class({
+				type: "number",
+				check: "number_format",
+				abort: false,
+				format: "safeint",
+				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
 		function _unknown(Class) {
 			return new Class({ type: "unknown" });
 		}
@@ -2252,6 +2470,50 @@ window.__ModuleLoader__.load({
 			return new Class({
 				type: "never",
 				...normalizeParams(params)
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _lt(value, params) {
+			return new $ZodCheckLessThan({
+				check: "less_than",
+				...normalizeParams(params),
+				value,
+				inclusive: false
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _lte(value, params) {
+			return new $ZodCheckLessThan({
+				check: "less_than",
+				...normalizeParams(params),
+				value,
+				inclusive: true
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _gt(value, params) {
+			return new $ZodCheckGreaterThan({
+				check: "greater_than",
+				...normalizeParams(params),
+				value,
+				inclusive: false
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _gte(value, params) {
+			return new $ZodCheckGreaterThan({
+				check: "greater_than",
+				...normalizeParams(params),
+				value,
+				inclusive: true
+			});
+		}
+		// @__NO_SIDE_EFFECTS__
+		function _multipleOf(value, params) {
+			return new $ZodCheckMultipleOf({
+				check: "multiple_of",
+				...normalizeParams(params),
+				value
 			});
 		}
 		// @__NO_SIDE_EFFECTS__
@@ -2727,6 +2989,28 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				}))];
 			}
 		};
+		const numberProcessor = (schema, ctx, _json, _params) => {
+			const json = _json;
+			const { minimum, maximum, format, multipleOf, exclusiveMaximum, exclusiveMinimum } = schema._zod.bag;
+			if (typeof format === "string" && format.includes("int")) json.type = "integer";
+			else json.type = "number";
+			const exMin = typeof exclusiveMinimum === "number" && exclusiveMinimum >= (minimum ?? Number.NEGATIVE_INFINITY);
+			const exMax = typeof exclusiveMaximum === "number" && exclusiveMaximum <= (maximum ?? Number.POSITIVE_INFINITY);
+			const legacy = ctx.target === "draft-04" || ctx.target === "openapi-3.0";
+			if (exMin) {
+				if (legacy) {
+					json.minimum = exclusiveMinimum;
+					json.exclusiveMinimum = true;
+				} else json.exclusiveMinimum = exclusiveMinimum;
+			} else if (typeof minimum === "number") json.minimum = minimum;
+			if (exMax) {
+				if (legacy) {
+					json.maximum = exclusiveMaximum;
+					json.exclusiveMaximum = true;
+				} else json.exclusiveMaximum = exclusiveMaximum;
+			} else if (typeof maximum === "number") json.maximum = maximum;
+			if (typeof multipleOf === "number") json.multipleOf = multipleOf;
+		};
 		const neverProcessor = (_schema, _ctx, json, _params) => {
 			json.not = {};
 		};
@@ -2736,6 +3020,28 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			if (values.every((v) => typeof v === "number")) json.type = "number";
 			if (values.every((v) => typeof v === "string")) json.type = "string";
 			json.enum = values;
+		};
+		const literalProcessor = (schema, ctx, json, _params) => {
+			const def = schema._zod.def;
+			const vals = [];
+			for (const val of def.values) if (val === void 0) {
+				if (ctx.unrepresentable === "throw") throw new Error("Literal `undefined` cannot be represented in JSON Schema");
+			} else if (typeof val === "bigint") {
+				if (ctx.unrepresentable === "throw") throw new Error("BigInt literals cannot be represented in JSON Schema");
+				else vals.push(Number(val));
+			} else vals.push(val);
+			if (vals.length === 0) {} else if (vals.length === 1) {
+				const val = vals[0];
+				json.type = val === null ? "null" : typeof val;
+				if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") json.enum = [val];
+				else json.const = val;
+			} else {
+				if (vals.every((v) => typeof v === "number")) json.type = "number";
+				if (vals.every((v) => typeof v === "string")) json.type = "string";
+				if (vals.every((v) => typeof v === "boolean")) json.type = "boolean";
+				if (vals.every((v) => v === null)) json.type = "null";
+				json.enum = vals;
+			}
 		};
 		const customProcessor = (_schema, ctx, _json, _params) => {
 			if (ctx.unrepresentable === "throw") throw new Error("Custom types cannot be represented in JSON Schema");
@@ -3287,6 +3593,74 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			$ZodJWT.init(inst, def);
 			ZodStringFormat.init(inst, def);
 		});
+		const ZodNumber = /*@__PURE__*/ $constructor("ZodNumber", (inst, def) => {
+			$ZodNumber.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => numberProcessor(inst, ctx, json, params);
+			_installLazyMethods(inst, "ZodNumber", {
+				gt(value, params) {
+					return this.check(/* @__PURE__ */ _gt(value, params));
+				},
+				gte(value, params) {
+					return this.check(/* @__PURE__ */ _gte(value, params));
+				},
+				min(value, params) {
+					return this.check(/* @__PURE__ */ _gte(value, params));
+				},
+				lt(value, params) {
+					return this.check(/* @__PURE__ */ _lt(value, params));
+				},
+				lte(value, params) {
+					return this.check(/* @__PURE__ */ _lte(value, params));
+				},
+				max(value, params) {
+					return this.check(/* @__PURE__ */ _lte(value, params));
+				},
+				int(params) {
+					return this.check(int(params));
+				},
+				safe(params) {
+					return this.check(int(params));
+				},
+				positive(params) {
+					return this.check(/* @__PURE__ */ _gt(0, params));
+				},
+				nonnegative(params) {
+					return this.check(/* @__PURE__ */ _gte(0, params));
+				},
+				negative(params) {
+					return this.check(/* @__PURE__ */ _lt(0, params));
+				},
+				nonpositive(params) {
+					return this.check(/* @__PURE__ */ _lte(0, params));
+				},
+				multipleOf(value, params) {
+					return this.check(/* @__PURE__ */ _multipleOf(value, params));
+				},
+				step(value, params) {
+					return this.check(/* @__PURE__ */ _multipleOf(value, params));
+				},
+				finite() {
+					return this;
+				}
+			});
+			const bag = inst._zod.bag;
+			inst.minValue = Math.max(bag.minimum ?? Number.NEGATIVE_INFINITY, bag.exclusiveMinimum ?? Number.NEGATIVE_INFINITY) ?? null;
+			inst.maxValue = Math.min(bag.maximum ?? Number.POSITIVE_INFINITY, bag.exclusiveMaximum ?? Number.POSITIVE_INFINITY) ?? null;
+			inst.isInt = (bag.format ?? "").includes("int") || Number.isSafeInteger(bag.multipleOf ?? .5);
+			inst.isFinite = true;
+			inst.format = bag.format ?? null;
+		});
+		function number(params) {
+			return /* @__PURE__ */ _number(ZodNumber, params);
+		}
+		const ZodNumberFormat = /*@__PURE__*/ $constructor("ZodNumberFormat", (inst, def) => {
+			$ZodNumberFormat.init(inst, def);
+			ZodNumber.init(inst, def);
+		});
+		function int(params) {
+			return /* @__PURE__ */ _int(ZodNumberFormat, params);
+		}
 		const ZodUnknown = /*@__PURE__*/ $constructor("ZodUnknown", (inst, def) => {
 			$ZodUnknown.init(inst, def);
 			ZodType.init(inst, def);
@@ -3464,6 +3838,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				...normalizeParams(params)
 			});
 		}
+		const ZodLiteral = /*@__PURE__*/ $constructor("ZodLiteral", (inst, def) => {
+			$ZodLiteral.init(inst, def);
+			ZodType.init(inst, def);
+			inst._zod.processJSONSchema = (ctx, json, params) => literalProcessor(inst, ctx, json, params);
+			inst.values = new Set(def.values);
+			Object.defineProperty(inst, "value", { get() {
+				if (def.values.length > 1) throw new Error("This schema contains multiple valid literal values. Use `.values` instead.");
+				return def.values[0];
+			} });
+		});
+		function literal(value, params) {
+			return new ZodLiteral({
+				type: "literal",
+				values: Array.isArray(value) ? value : [value],
+				...normalizeParams(params)
+			});
+		}
 		const ZodTransform = /*@__PURE__*/ $constructor("ZodTransform", (inst, def) => {
 			$ZodTransform.init(inst, def);
 			ZodType.init(inst, def);
@@ -3637,9 +4028,25 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* @module @ywzhang1031/dsh-aside-host/typert-contract
 		*/
 		const ASIDE_PACKAGE = "@ywzhang1031/dsh-aside-host";
+		const anchorSchema = object({
+			messageId: string().nullable(),
+			exact: string(),
+			prefix: string(),
+			suffix: string(),
+			occurrence: number().nullable(),
+			startOffset: number().nullable()
+		});
+		const recordSchema = object({
+			schemaVersion: literal(1),
+			parentSessionId: string(),
+			subSessionId: string(),
+			anchor: anchorSchema,
+			createdAt: number(),
+			updatedAt: number()
+		});
 		//#endregion
 		//#region ../aside-host/lib/typert.remote-client.js
-		/** Browser Remote contribution for the Aside endpoint. @module @ywzhang1031/dsh-aside-host/remote */
+		/** Browser Remote contribution for the Aside endpoints. @module @ywzhang1031/dsh-aside-host/remote */
 		const TYPERT_REMOTE = {
 			package: ASIDE_PACKAGE,
 			descriptors: [{
@@ -3655,143 +4062,215 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					codec: {
 						mode: "strict",
 						typeSymbol: `${ASIDE_PACKAGE}/types#AsideCreateRequest`,
-						schema: object({ parentSessionId: string() })
+						schema: object({
+							parentSessionId: string(),
+							anchor: anchorSchema
+						})
 					}
 				}],
 				result: {
 					mode: "strict",
 					typeSymbol: `${ASIDE_PACKAGE}/types#AsideCreateResult`,
-					schema: object({ sessionId: string() })
+					schema: object({ record: recordSchema })
+				}
+			}, {
+				id: `${ASIDE_PACKAGE}#aside/list`,
+				service: "aside",
+				namespace: "aside",
+				method: "list",
+				invocation: { kind: "direct" },
+				parameters: [{
+					name: "request",
+					wire: "request",
+					source: "json",
+					codec: {
+						mode: "strict",
+						typeSymbol: `${ASIDE_PACKAGE}/types#AsideListRequest`,
+						schema: object({ parentSessionId: string() })
+					}
+				}],
+				result: {
+					mode: "strict",
+					typeSymbol: `${ASIDE_PACKAGE}/types#AsideListResult`,
+					schema: object({ records: array(recordSchema) })
 				}
 			}]
 		};
 		//#endregion
-		//#region lib/types/client/anchors.js
+		//#region ../aside-host/lib/types/types.js
 		/**
-		* Aside anchor persistence: the mapping from an asked-about prose span to
-		* its read-only side conversation, kept in browser localStorage so anchors
-		* survive reloads. This is client-only presentation state — the durable
-		* authority (parent lineage, aside lineage) lives in the session logs; a
-		* lost anchor store degrades to anchors that simply no longer list, while
-		* the side conversations stay reachable from the session list.
-		* @module @ywzhang1031/dsh-client-ui-aside/anchors
+		* Decode the anchor marker out of a first user message, or undefined when the
+		* message carries none. Never throws on malformed input.
 		*/
-		const STORAGE_KEY = "dsh-aside-anchors";
-		/** Read the persisted record list, degrading to empty on any corruption. */
-		function readRecords(storage) {
-			if (storage === void 0) return [];
+		function parseAnchor(text) {
+			const match = /\[aside:([^\]]+)\]/.exec(text);
+			if (match === null || match[1] === void 0) return void 0;
 			try {
-				const raw = storage.getItem(STORAGE_KEY);
-				if (raw === null) return [];
-				const parsed = JSON.parse(raw);
-				if (!Array.isArray(parsed)) return [];
-				return parsed.filter((entry) => typeof entry === "object" && entry !== null && typeof entry.sessionId === "string" && (entry.messageId === void 0 || typeof entry.messageId === "string") && typeof entry.text === "string" && typeof entry.subSessionId === "string" && typeof entry.createdAt === "number");
+				const parsed = JSON.parse(decodeURIComponent(match[1]));
+				return isAsideAnchor(parsed) ? parsed : void 0;
 			} catch {
-				return [];
+				return;
 			}
 		}
+		/** Structural guard for an anchor recovered from untrusted persisted text. */
+		function isAsideAnchor(value) {
+			if (typeof value !== "object" || value === null) return false;
+			const record = value;
+			return (record["messageId"] === null || typeof record["messageId"] === "string") && typeof record["exact"] === "string" && typeof record["prefix"] === "string" && typeof record["suffix"] === "string" && (record["occurrence"] === null || typeof record["occurrence"] === "number") && (record["startOffset"] === null || typeof record["startOffset"] === "number");
+		}
+		/** Whitespace-normalized human summary of an anchor's exact text (for titles/sidebar). */
+		function anchorSummary(exact, max = 60) {
+			const compact = exact.replace(/\s+/g, " ").trim();
+			return compact.length > max ? `${compact.slice(0, max)}…` : compact;
+		}
 		/**
-		* Mutable anchor ledger with persistence and change subscription. One
-		* instance per browser application (the plugin owns it).
+		* Canonical dedup identity for one anchor. Every disambiguation field counts:
+		* the same text in a different message, at a different occurrence, or at a
+		* different offset is a different aside.
 		*/
-		var AnchorStore = class {
-			storage;
-			records;
+		function anchorKey(anchor) {
+			return [
+				anchor.messageId ?? "",
+				anchor.exact,
+				anchor.prefix,
+				anchor.suffix,
+				anchor.occurrence ?? "",
+				anchor.startOffset ?? ""
+			].join("\0");
+		}
+		//#endregion
+		//#region lib/types/client/repository.js
+		/**
+		* Aside repository: the browser cache over the Host's durable aside index.
+		* The Host (not localStorage) is the single source of truth — this store only
+		* mirrors `aside.list`/`aside.create` results for the current parent
+		* session. A freshly created aside is added to the cache directly from the
+		* create response (no second local fact), and switching parent sessions
+		* triggers one `aside.list` refresh. No polling and no `localStorage`.
+		* @module @ywzhang1031/dsh-client-ui-aside/repository
+		*/
+		/** Normalize one record's anchor text for the sidebar display. */
+		function asideText(record, max = 60) {
+			const compact = record.anchor.exact.replace(/\s+/g, " ").trim();
+			return compact.length > max ? `${compact.slice(0, max)}…` : compact;
+		}
+		/**
+		* Mutable cache of asides for one parent conversation, populated from the
+		* Host. One instance per browser application (the plugin owns it).
+		*/
+		var AsideRepository = class {
+			remote;
+			records = [];
+			parentSessionId = null;
 			version = 0;
+			/** Bumped by every refresh() and add(), so a slow stale refresh cannot clobber a newer write. */
+			generation = 0;
 			listeners = /* @__PURE__ */ new Set();
-			constructor(storage = defaultStorage()) {
-				this.storage = storage;
-				this.records = readRecords(this.storage);
+			constructor(remote) {
+				this.remote = remote;
 			}
 			/** Monotonic change counter; renderers subscribe and re-derive on bump. */
 			getVersion() {
 				return this.version;
 			}
-			/** Every anchor, optionally narrowed to one main conversation. */
-			list(sessionId) {
-				return sessionId === void 0 ? this.records : this.records.filter((record) => record.sessionId === sessionId);
+			/** Records for the currently cached parent session. */
+			list() {
+				return this.records;
 			}
-			/** The anchor an identical (session, message?, text) span already created, if any. */
-			find(sessionId, messageId, text) {
-				return this.records.find((record) => record.sessionId === sessionId && record.messageId === messageId && record.text === text);
+			/** Clear the projection when no main session is selected. */
+			clear() {
+				if (this.parentSessionId === null && this.records.length === 0) return;
+				this.parentSessionId = null;
+				this.records = [];
+				this.generation += 1;
+				this.notify();
 			}
-			/** The anchor an aside id already answers, if any. */
+			/**
+			* Load the asides for one parent session. A call is discarded when a newer
+			* refresh or a local `add` superseded it (generation changed), or when the
+			* user switched sessions mid-flight. Failures clear the cache so a broken
+			* parent never shows a stale list.
+			*/
+			async refresh(parentSessionId) {
+				this.parentSessionId = parentSessionId;
+				const generation = ++this.generation;
+				const result = await this.remote.list({ parentSessionId });
+				if (this.parentSessionId !== parentSessionId || this.generation !== generation) return;
+				this.records = result.ok && result.value !== void 0 ? result.value.records : [];
+				this.notify();
+			}
+			/**
+			* Add a freshly created record to the cache. The record already came from
+			* the Host's create response, so this is a cache update, never a second fact.
+			* Bumping the generation invalidates any in-flight refresh whose snapshot
+			* predates this record, so it cannot overwrite it with a stale (possibly
+			* empty) list.
+			*/
+			add(record) {
+				if (record.parentSessionId !== this.parentSessionId) return;
+				this.generation += 1;
+				if (this.records.findIndex((item) => item.subSessionId === record.subSessionId) === -1) this.records = [...this.records, record];
+				else this.records = this.records.map((item) => item.subSessionId === record.subSessionId ? record : item);
+				this.notify();
+			}
+			/** The record one anchor already answers, if any (full anchor identity). */
+			find(parentSessionId, anchor) {
+				const key = anchorKey(anchor);
+				return this.records.find((record) => record.parentSessionId === parentSessionId && anchorKey(record.anchor) === key);
+			}
+			/** The record one aside id answers, if any. */
 			findSub(subSessionId) {
 				return this.records.find((record) => record.subSessionId === subSessionId);
 			}
-			/**
-			* Idempotently create an anchor: an identical (session, message, text) span
-			* returns the existing record instead of creating a second side
-			* conversation. Persists and notifies on creation only.
-			*/
-			ensure(record) {
-				const existing = this.find(record.sessionId, record.messageId, record.text);
-				if (existing !== void 0) return existing;
-				const created = {
-					...record,
-					createdAt: Date.now()
-				};
-				this.records = [...this.records, created];
-				this.persist();
-				this.notify();
-				return created;
-			}
-			/** Subscribe to anchor-set changes (creation only in the current surface). */
+			/** Subscribe to cache-set changes (refresh and add). */
 			subscribe(listener) {
 				this.listeners.add(listener);
 				return () => {
 					this.listeners.delete(listener);
 				};
 			}
-			persist() {
-				try {
-					this.storage?.setItem(STORAGE_KEY, JSON.stringify(this.records));
-				} catch {}
-			}
 			notify() {
 				this.version += 1;
 				for (const listener of [...this.listeners]) try {
 					listener();
 				} catch (error) {
-					console.error("[aside] anchor listener threw:", error);
+					console.error("[aside] repository listener threw:", error);
 				}
 			}
 		};
-		function defaultStorage() {
-			try {
-				return typeof window === "undefined" ? void 0 : window.localStorage;
-			} catch {
-				return;
-			}
-		}
 		//#endregion
 		//#region lib/types/client/drawer-store.js
 		/**
 		* Drawer open-state store: which side conversation the overlay shows, or a
 		* pending draft that only becomes a real aside once the user actually sends
 		* a question. A closed unanswered draft leaves nothing behind — no session,
-		* no anchor, no highlight.
+		* no anchor, no highlight. The full {@link AsideAnchor} is carried so the
+		* first send can hand it to `aside.create`; the Host (not the client)
+		* persists it into the child's first message.
 		* @module @ywzhang1031/dsh-client-ui-aside/drawer-store
 		*/
 		const CLOSED = {
 			subSessionId: null,
 			parentSessionId: null,
-			anchorText: "",
-			messageId: null,
+			anchor: null,
 			draft: false,
-			error: null
+			error: null,
+			record: null
 		};
-		/** Build the opening question: the user's input plus the anchored source text. */
-		function openingQuestion(input, anchorText) {
-			const trimmed = input.trim();
-			if (trimmed === "") return "";
-			return `${trimmed}\n\n---\n引用原文：\n${anchorText}`;
-		}
 		var DrawerStore = class {
 			state = CLOSED;
+			version = 0;
 			listeners = /* @__PURE__ */ new Set();
 			get() {
 				return this.state;
+			}
+			/**
+			* Monotonic counter bumped on every state transition. Callers capture it
+			* before an async first-send and re-check it afterwards so a drawer that was
+			* closed/reopened mid-flight never gets bound to the wrong anchor.
+			*/
+			getVersion() {
+				return this.version;
 			}
 			/**
 			* Open a fresh draft: the drawer shows an empty composer bound to one
@@ -3801,35 +4280,38 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				this.state = {
 					subSessionId: null,
 					parentSessionId: next.parentSessionId,
-					anchorText: next.anchorText,
-					messageId: next.messageId,
+					anchor: next.anchor,
 					draft: true,
-					error: null
+					error: null,
+					record: null
 				};
 				this.notify();
 			}
 			/** Open the drawer on one existing aside (anchor or sidebar entry click). */
-			openSub(next) {
+			openSub(record) {
 				this.state = {
-					subSessionId: next.subSessionId,
-					parentSessionId: next.parentSessionId,
-					anchorText: next.anchorText,
-					messageId: null,
+					subSessionId: record.subSessionId,
+					parentSessionId: record.parentSessionId,
+					anchor: record.anchor,
 					draft: false,
-					error: null
+					error: null,
+					record
 				};
 				this.notify();
 			}
-			/** Bind the draft to the aside created by its first send. */
-			attach(subSessionId) {
-				if (this.state.subSessionId !== null || !this.state.draft) return;
+			/** Bind the exact Host record to the draft that initiated its first send. */
+			attach(record, expectedVersion) {
+				if (this.version !== expectedVersion || this.state.subSessionId !== null || !this.state.draft || this.state.anchor === null || this.state.parentSessionId !== record.parentSessionId || anchorKey(this.state.anchor) !== anchorKey(record.anchor)) return false;
 				this.state = {
-					...this.state,
-					subSessionId,
+					subSessionId: record.subSessionId,
+					parentSessionId: record.parentSessionId,
+					anchor: record.anchor,
 					draft: false,
-					error: null
+					error: null,
+					record
 				};
 				this.notify();
+				return true;
 			}
 			close() {
 				if (this.state === CLOSED) return;
@@ -3837,10 +4319,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				this.notify();
 			}
 			setError(message) {
-				if (this.state.subSessionId !== null && !this.state.draft) return;
 				this.state = {
 					...this.state,
 					error: message
+				};
+				this.notify();
+			}
+			clearError() {
+				if (this.state.error === null) return;
+				this.state = {
+					...this.state,
+					error: null
 				};
 				this.notify();
 			}
@@ -3851,6 +4340,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				};
 			}
 			notify() {
+				this.version += 1;
 				for (const listener of [...this.listeners]) try {
 					listener();
 				} catch (error) {
@@ -3859,16 +4349,294 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}
 		};
 		//#endregion
+		//#region lib/types/client/quote.js
+		/**
+		* Quote selector: build and restore the precise character span an aside is
+		* anchored to, across Markdown's inline element boundaries. The anchor keeps
+		* `exact` (the selected prose), `prefix`/`suffix` (surrounding text for
+		* disambiguation), `occurrence` (1-based index among identical matches) and
+		* `startOffset` (character offset inside the message's plain text). None of
+		* these is a sole source of truth — restore tries raw then whitespace-
+		* normalized matching and degrades gracefully.
+		* @module @ywzhang1031/dsh-client-ui-aside/quote
+		*/
+		/** Collapse every whitespace run to one space and trim (matching normalizer). */
+		function normalizeText(text) {
+			return text.replace(/\s+/g, " ").trim();
+		}
+		/** Walk a message subtree and return its text nodes plus the concatenated text. */
+		function collectTextSpans(root) {
+			const doc = root.ownerDocument ?? (typeof document !== "undefined" ? document : void 0);
+			if (doc === void 0) return {
+				text: "",
+				spans: []
+			};
+			const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+			const spans = [];
+			let text = "";
+			let current;
+			while ((current = walker.nextNode()) !== null) {
+				const node = current;
+				const start = text.length;
+				text += node.data;
+				spans.push({
+					node,
+					start,
+					end: text.length
+				});
+			}
+			return {
+				text,
+				spans
+			};
+		}
+		/** Resolve a (container, offset) to an absolute character offset, or null. */
+		function absoluteOffset(spans, container, offset) {
+			if (container.nodeType === Node.TEXT_NODE) {
+				const span = spans.find((item) => item.node === container);
+				if (span === void 0) return null;
+				return span.start + offset;
+			}
+			if (container.nodeType === Node.ELEMENT_NODE) {
+				const child = container.childNodes[offset];
+				if (child === void 0) return null;
+				const first = firstTextOffset(spans, child);
+				if (first !== null) return first;
+				for (const span of spans) if (container.compareDocumentPosition(span.node) & Node.DOCUMENT_POSITION_CONTAINED_BY) {
+					if ((child.compareDocumentPosition(span.node) & (Node.DOCUMENT_POSITION_FOLLOWING | Node.DOCUMENT_POSITION_CONTAINED_BY)) !== 0) return span.start;
+				}
+			}
+			return null;
+		}
+		function firstTextOffset(spans, root) {
+			for (const span of spans) if (root === span.node || root.contains(span.node)) return span.start;
+			return null;
+		}
+		/** Count occurrences of `needle` in `haystack` strictly before `before`. */
+		function priorOccurrences(haystack, needle, before) {
+			let count = 0;
+			let index = haystack.indexOf(needle);
+			while (index !== -1 && index < before) {
+				count += 1;
+				index = haystack.indexOf(needle, index + needle.length);
+			}
+			return count;
+		}
+		/**
+		* Build the disambiguation fields for a selection range inside one message.
+		* Returns null when the range carries no usable text.
+		*/
+		function buildQuote(messageEl, range) {
+			const exact = range.toString();
+			if (exact.trim() === "") return null;
+			const { text, spans } = collectTextSpans(messageEl);
+			const start = absoluteOffset(spans, range.startContainer, range.startOffset);
+			const end = absoluteOffset(spans, range.endContainer, range.endOffset);
+			const startOffset = start ?? 0;
+			const occurrence = start === null ? null : priorOccurrences(text, exact, start) + 1;
+			return {
+				exact,
+				prefix: start === null ? "" : text.slice(Math.max(0, start - 60), start),
+				suffix: end === null ? "" : text.slice(end, end + 60),
+				occurrence,
+				startOffset
+			};
+		}
+		/** Map an absolute character offset to a (text node, node-local offset). */
+		function spanAt(spans, offset) {
+			for (const span of spans) if (offset >= span.start && offset <= span.end) return {
+				node: span.node,
+				offset: Math.min(offset - span.start, span.node.data.length)
+			};
+			const last = spans[spans.length - 1];
+			if (last !== void 0 && offset >= last.end) return {
+				node: last.node,
+				offset: last.node.data.length
+			};
+			return null;
+		}
+		/** All raw ranges of `needle` in `haystack` (exact, then normalized). */
+		function matchRanges(haystack, needle) {
+			const raw = indexAll(haystack, needle);
+			if (raw.length > 0) return raw.map((start) => ({
+				start,
+				end: start + needle.length
+			}));
+			const normalizedHaystack = normalizeText(haystack);
+			const normalizedNeedle = normalizeText(needle);
+			if (normalizedNeedle === "") return [];
+			return indexAll(normalizedHaystack, normalizedNeedle).map((offset) => {
+				const start = denormalizeOffset(haystack, offset);
+				const end = denormalizeOffset(haystack, offset + normalizedNeedle.length);
+				return start === null || end === null ? null : {
+					start,
+					end
+				};
+			}).filter((match) => match !== null);
+		}
+		function indexAll(haystack, needle) {
+			const out = [];
+			if (needle === "") return out;
+			let index = haystack.indexOf(needle);
+			while (index !== -1) {
+				out.push(index);
+				index = haystack.indexOf(needle, index + needle.length);
+			}
+			return out;
+		}
+		/** Convert a normalized-string offset back to a raw-string offset. */
+		function denormalizeOffset(raw, normalizedOffset) {
+			let rawIndex = 0;
+			let normIndex = 0;
+			while (rawIndex < raw.length && normIndex < normalizedOffset) {
+				const rawChar = raw[rawIndex];
+				if (/\s/.test(rawChar)) {
+					while (rawIndex < raw.length && /\s/.test(raw[rawIndex])) rawIndex += 1;
+					normIndex += 1;
+				} else {
+					rawIndex += 1;
+					normIndex += 1;
+				}
+			}
+			return normIndex === normalizedOffset ? rawIndex : null;
+		}
+		/**
+		* Restore the Range an anchor describes inside one message element. Tries the
+		* recorded occurrence, then prefix/suffix disambiguation, then normalized
+		* matching. Returns null when no reliable span can be found.
+		*/
+		function restoreRange(messageEl, anchor) {
+			const doc = messageEl.ownerDocument ?? (typeof document !== "undefined" ? document : void 0);
+			if (doc === void 0) return null;
+			const { text, spans } = collectTextSpans(messageEl);
+			if (text === "" || anchor.exact === "") return null;
+			const matches = matchRanges(text, anchor.exact);
+			if (matches.length === 0) return null;
+			const starts = matches.map((match) => match.start);
+			let match;
+			if (anchor.occurrence !== null && anchor.occurrence >= 1 && anchor.occurrence <= starts.length) match = matches[anchor.occurrence - 1];
+			else {
+				const start = disambiguate(text, starts, anchor);
+				match = matches.find((candidate) => candidate.start === start);
+			}
+			const startPoint = spanAt(spans, match.start);
+			const endPoint = spanAt(spans, match.end);
+			if (startPoint === null || endPoint === null) return null;
+			const range = doc.createRange();
+			range.setStart(startPoint.node, startPoint.offset);
+			range.setEnd(endPoint.node, endPoint.offset);
+			return range;
+		}
+		/** Pick a match by prefix/suffix proximity when occurrence is unavailable. */
+		function disambiguate(text, starts, anchor) {
+			let best = starts[0];
+			let bestScore = -1;
+			for (const start of starts) {
+				const before = text.slice(Math.max(0, start - anchor.prefix.length), start);
+				const after = text.slice(start + anchor.exact.length, start + anchor.exact.length + anchor.suffix.length);
+				const score = similarity(before, anchor.prefix) + similarity(after, anchor.suffix);
+				if (score > bestScore) {
+					bestScore = score;
+					best = start;
+				}
+			}
+			return best;
+		}
+		function similarity(left, right) {
+			const a = normalizeText(left);
+			const b = normalizeText(right);
+			if (a === "" || b === "") return 0;
+			if (a === b) return 2;
+			return a.endsWith(b) || b.endsWith(a) ? 1 : 0;
+		}
+		/**
+		* Find the chat-anchor row (one rendered message node) whose text contains
+		* the anchor's exact prose. Used to scope exact-text restoration to a single
+		* message. Falls back to null when no row contains it (the caller then
+		* degrades to message-level positioning).
+		*/
+		function findRowContaining(root, exact) {
+			const needle = normalizeText(exact);
+			if (needle === "") return null;
+			for (const row of root.querySelectorAll("[data-chat-anchor-key]")) {
+				if (!(row instanceof HTMLElement)) continue;
+				if (normalizeText(row.textContent ?? "").includes(needle)) return row;
+			}
+			return null;
+		}
+		//#endregion
+		//#region lib/types/client/message-dom-registry.js
+		/**
+		* Message DOM registry: the plugin's own map from a stock assistant
+		* `messageId` to that message's turn-tail row and action sentinel. The
+		* per-message {@link AsideAskAction} registers its nodes on mount and
+		* unregisters on unmount; the sidebar/highlight layers use the registry to
+		* scroll to a message — using the stock `data-chat-anchor-key` row as a
+		* local, verifiable DOM hint, with the action sentinel as the fallback (never
+		* a stock CSS class name as the sole authority).
+		* @module @ywzhang1031/dsh-client-ui-aside/message-dom-registry
+		*/
+		/**
+		* Resolve the nearest chat-anchor row above a node, or null when the node
+		* sits outside a rendered conversation row. Stock publishes the row as
+		* `data-chat-anchor-key`; this is a best-effort hint, not a hard contract.
+		*/
+		function chatAnchorRow(node) {
+			if (node === null) return null;
+			return (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement)?.closest("[data-chat-anchor-key]") ?? null;
+		}
+		/**
+		* Resolve the rendered message row for an exact span immediately before one
+		* registered turn-tail. Searching backwards only to the prior turn-tail
+		* avoids selecting the same prose from an older turn.
+		*/
+		function findMessageRowBefore(turnTail, exact) {
+			const needle = exact.replace(/\s+/g, " ").trim();
+			if (needle === "") return null;
+			const rows = [...turnTail.ownerDocument.querySelectorAll("[data-chat-anchor-key]")];
+			const boundary = rows.indexOf(turnTail);
+			if (boundary === -1) return null;
+			for (let index = boundary - 1; index >= 0; index -= 1) {
+				const row = rows[index];
+				if (!(row instanceof HTMLElement)) continue;
+				if ((row.dataset.chatAnchorKey ?? "").includes("turn-tail")) break;
+				if ((row.textContent ?? "").replace(/\s+/g, " ").trim().includes(needle)) return row;
+			}
+			return null;
+		}
+		/**
+		* Process-local registry keyed by stock messageId. Registration is scoped to
+		* the action component's lifecycle; nothing observes the conversation DOM
+		* here (that belongs to the highlight layer).
+		*/
+		var MessageDomRegistry = class {
+			entries = /* @__PURE__ */ new Map();
+			/** Register a message's DOM anchors; returns the unregister disposer. */
+			register(messageId, entry) {
+				this.entries.set(messageId, entry);
+				return () => {
+					if (this.entries.get(messageId) === entry) this.entries.delete(messageId);
+				};
+			}
+			/** The DOM anchors for one message, if it is currently mounted. */
+			get(messageId) {
+				return this.entries.get(messageId);
+			}
+			/** Whether any message is registered. */
+			get size() {
+				return this.entries.size;
+			}
+		};
+		//#endregion
 		//#region lib/types/client/selection.js
 		/**
 		* Prose-selection watcher: detects a text selection in the conversation
 		* surface, floats an "ask about this" button above it, and hands the
-		* resolved selection context to the plugin's opener. Stock renderers publish
-		* no message-level DOM identity, so the watcher attributes the selection to
-		* the CURRENT session from the runtime sessions service; message identity is
-		* left to the per-message aside action on the assistant-actions strip, which
-		* receives the stock `messageId`. The watcher stays outside the React tree
-		* entirely.
+		* resolved selection context (including a quote-selector anchor) to the
+		* plugin's opener. Message identity is resolved separately via
+		* {@link resolveMessageId} (history matching) because stock renders the
+		* assistant-actions strip in a sibling node of the message text. The watcher
+		* stays outside the React tree entirely.
 		* @module @ywzhang1031/dsh-client-ui-aside/selection
 		*/
 		/** Selection bounds: reject empty, whole-message, or giant selections. */
@@ -3877,20 +4645,30 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		const BUTTON_CLASS = "aside-ask-button";
 		/**
 		* Resolve one browser selection to a {@link SelectionContext}, or undefined
-		* when it is empty, out of bounds, or no session is current. The session is
-		* the runtime's current one: selections happen in the conversation the user
-		* is viewing.
+		* when it is empty, out of bounds, or no session is current. The anchor's
+		* `messageId` starts null; the opener resolves it from history before the
+		* aside is created.
 		*/
 		function resolveSelection(doc, currentSessionId) {
 			if (currentSessionId === null || currentSessionId === "") return void 0;
 			const selection = doc.getSelection();
 			if (selection === null || selection.rangeCount === 0 || selection.isCollapsed) return void 0;
 			const range = selection.getRangeAt(0);
-			const text = range.toString().trim();
-			if (text.length < 2 || text.length > 800) return void 0;
+			const exact = range.toString();
+			if (exact.trim().length < 2 || exact.trim().length > 800) return void 0;
 			const start = range.startContainer;
 			const messageEl = start.nodeType === Node.ELEMENT_NODE ? start : start.parentElement;
 			if (messageEl === null) return void 0;
+			const row = chatAnchorRow(start);
+			const quote = row === null ? null : buildQuote(row, range);
+			const anchor = {
+				messageId: null,
+				exact,
+				prefix: quote?.prefix ?? "",
+				suffix: quote?.suffix ?? "",
+				occurrence: quote?.occurrence ?? null,
+				startOffset: quote?.startOffset ?? null
+			};
 			let rect;
 			try {
 				const probe = range.getBoundingClientRect();
@@ -3900,10 +4678,36 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}
 			return {
 				sessionId: currentSessionId,
-				messageId: null,
-				text,
+				anchor,
 				rect
 			};
+		}
+		/** Extract the plain text of a content-block array. */
+		function textOfContent(content) {
+			return (Array.isArray(content) ? content : []).filter((block) => typeof block === "object" && block !== null && block.type === "text").map((block) => block.text ?? "").join("\n");
+		}
+		/**
+		* Resolve the unique assistant message a selected span belongs to by matching
+		* its normalized text against the session history. Returns the messageId only
+		* when exactly one assistant message contains the span; ambiguity or absence
+		* yields null (the aside still works message-less).
+		*/
+		function resolveMessageId(entries, exact) {
+			const needle = normalizeText(exact);
+			if (needle === "") return null;
+			let found = null;
+			let count = 0;
+			for (const entry of entries) {
+				const event = entry.event;
+				if (event.type !== "assistant/message") continue;
+				const data = event.data;
+				if (typeof data?.message?.id !== "string") continue;
+				if (normalizeText(textOfContent(data.message.content)).includes(needle)) {
+					found = data.message.id;
+					count += 1;
+				}
+			}
+			return count === 1 ? found : null;
 		}
 		/**
 		* Document-level watcher owning the floating ask button. `start()` installs
@@ -3963,7 +4767,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			sync() {
 				const selection = resolveSelection(this.doc, this.currentSession());
 				const active = this.active;
-				if (!(selection === void 0 || active === null || active.sessionId !== selection.sessionId || active.messageId !== selection.messageId || active.text !== selection.text)) return;
+				if (!(selection === void 0 || active === null || active.sessionId !== selection.sessionId || active.anchor.exact !== selection.anchor.exact)) return;
 				this.active = selection ?? null;
 				if (selection === void 0) {
 					this.hide();
@@ -3998,8 +4802,192 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}
 		};
 		//#endregion
+		//#region lib/types/client/highlight.js
+		/**
+		* Exact-text highlight over the parent conversation: restore each aside's
+		* anchor Range and paint it with the CSS Custom Highlight API (no `<mark>`
+		* wrapping of React-managed text). One shared highlight carries every
+		* aside's Range; click identification resolves the point with
+		* `caretPositionFromPoint`/`caretRangeFromPoint` and tests membership in
+		* each aside's restored Range. Browsers without Custom Highlight fall back to
+		* message-level styling; the caller owns that CSS class.
+		* @module @ywzhang1031/dsh-client-ui-aside/highlight
+		*/
+		/** The single CSS highlight name shared by every aside's exact highlight. */
+		const HIGHLIGHT_NAME = "aside-highlight";
+		/** Short-lived stronger highlight used when the sidebar locates an anchor. */
+		const ACTIVE_HIGHLIGHT_NAME = "aside-highlight-active";
+		/** Whether the browser exposes the CSS Custom Highlight API. */
+		function supportsCustomHighlight() {
+			return typeof CSS !== "undefined" && "highlights" in CSS && typeof Highlight !== "undefined";
+		}
+		/** Whether a collapsed point (node, offset) lies inside a Range. */
+		function rangeContainsPoint(range, node, offset) {
+			try {
+				return range.isPointInRange(node, offset);
+			} catch {
+				return false;
+			}
+		}
+		/**
+		* Owns the live set of exact highlight Ranges for one conversation. Re-adding
+		* an aside replaces its previous Range (a DOM re-render recovers the span by
+		* calling {@link AsideHighlighter.add} again with a freshly restored Range).
+		*/
+		var AsideHighlighter = class {
+			doc;
+			ranges = /* @__PURE__ */ new Map();
+			highlight = null;
+			activeHighlight = null;
+			activeTimer;
+			activeSubSessionId = null;
+			constructor(doc) {
+				this.doc = doc;
+			}
+			/** The set of sub-session ids currently painted exactly. */
+			get painted() {
+				return new Set(this.ranges.keys());
+			}
+			/** Add or replace one aside's exact Range. Returns true when supported. */
+			add(subSessionId, range) {
+				this.ranges.set(subSessionId, range);
+				this.refresh();
+				return supportsCustomHighlight();
+			}
+			/** Remove one aside's exact Range. */
+			remove(subSessionId) {
+				if (!this.ranges.delete(subSessionId)) return;
+				if (this.activeSubSessionId === subSessionId) this.clearFocus();
+				this.refresh();
+			}
+			/** Remove every exact Range. */
+			clear() {
+				this.clearFocus();
+				if (this.ranges.size === 0) return;
+				this.ranges.clear();
+				this.refresh();
+			}
+			/**
+			* Scroll the exact stored span into view and briefly strengthen its paint.
+			* Returns false when that span is not currently mounted, so callers can
+			* fall back to the containing message row.
+			*/
+			focus(subSessionId) {
+				const range = this.ranges.get(subSessionId);
+				if (range === void 0) return false;
+				if (!range.startContainer.isConnected || !range.endContainer.isConnected || range.collapsed || range.toString().trim() === "") {
+					this.ranges.delete(subSessionId);
+					this.refresh();
+					return false;
+				}
+				const start = range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement;
+				if (start instanceof HTMLElement && typeof start.scrollIntoView === "function") {
+					if (!this.centerRange(range, start)) start.scrollIntoView({
+						behavior: "smooth",
+						block: "center",
+						inline: "nearest"
+					});
+				}
+				this.clearFocus();
+				this.activeSubSessionId = subSessionId;
+				if (supportsCustomHighlight()) {
+					this.activeHighlight = new Highlight(range);
+					(this.doc.defaultView?.CSS ?? CSS).highlights.set(ACTIVE_HIGHLIGHT_NAME, this.activeHighlight);
+				}
+				this.activeTimer = setTimeout(() => {
+					this.clearFocus();
+				}, 1600);
+				return true;
+			}
+			/** Rebuild the shared highlight from the current Range set. */
+			refresh() {
+				if (!supportsCustomHighlight()) return;
+				if (this.highlight === null) this.highlight = new Highlight();
+				this.highlight.clear();
+				for (const range of this.ranges.values()) this.highlight.add(range);
+				(this.doc.defaultView?.CSS ?? CSS).highlights.set(HIGHLIGHT_NAME, this.highlight);
+			}
+			/** Fine-center a long paragraph on the selected line after mounting it. */
+			centerRange(range, start) {
+				if (typeof range.getBoundingClientRect !== "function") return false;
+				const rect = range.getBoundingClientRect();
+				if (rect.height === 0 && rect.width === 0) return false;
+				const win = this.doc.defaultView;
+				if (win === null) return false;
+				const conversationScroller = start.closest("[data-conversation-scroll]");
+				if (conversationScroller !== null) {
+					const viewport = conversationScroller.getBoundingClientRect();
+					conversationScroller.scrollTop = Math.max(0, conversationScroller.scrollTop + rect.top - viewport.top - (viewport.height - rect.height) / 2);
+					return true;
+				}
+				let scroller = start.parentElement;
+				while (scroller !== null) {
+					const style = win.getComputedStyle(scroller);
+					if (/(auto|scroll|overlay)/u.test(style.overflowY) && scroller.scrollHeight > scroller.clientHeight) break;
+					scroller = scroller.parentElement;
+				}
+				if (scroller !== null && typeof scroller.scrollBy === "function") {
+					const viewport = scroller.getBoundingClientRect();
+					scroller.scrollBy({
+						top: rect.top - viewport.top - (viewport.height - rect.height) / 2,
+						behavior: "smooth"
+					});
+					return true;
+				}
+				const pageScroller = this.doc.scrollingElement;
+				if (pageScroller !== null && pageScroller.scrollHeight > pageScroller.clientHeight && typeof win.scrollBy === "function") {
+					win.scrollBy({
+						top: rect.top - (win.innerHeight - rect.height) / 2,
+						behavior: "smooth"
+					});
+					return true;
+				}
+				return false;
+			}
+			clearFocus() {
+				if (this.activeTimer !== void 0) clearTimeout(this.activeTimer);
+				this.activeTimer = void 0;
+				this.activeSubSessionId = null;
+				if (supportsCustomHighlight()) (this.doc.defaultView?.CSS ?? CSS).highlights.delete(ACTIVE_HIGHLIGHT_NAME);
+				this.activeHighlight = null;
+			}
+			/**
+			* Resolve a viewport point to the aside whose exact Range contains it, via
+			* caret position resolution. Returns null when the point is outside every
+			* highlighted span (or when the browser cannot resolve a caret point).
+			*/
+			hitTest(x, y) {
+				const point = this.caretPoint(x, y);
+				if (point === null) return null;
+				for (const [subSessionId, range] of this.ranges) if (rangeContainsPoint(range, point.node, point.offset)) return subSessionId;
+				return null;
+			}
+			caretPoint(x, y) {
+				const doc = this.doc;
+				if (typeof doc.caretPositionFromPoint === "function") {
+					const position = doc.caretPositionFromPoint(x, y);
+					if (position !== null) return {
+						node: position.offsetNode,
+						offset: position.offset
+					};
+				}
+				if (typeof doc.caretRangeFromPoint === "function") {
+					const range = doc.caretRangeFromPoint(x, y);
+					if (range !== null) return {
+						node: range.startContainer,
+						offset: range.startOffset
+					};
+				}
+				return null;
+			}
+		};
+		/** Restore one aside's anchor Range inside the given message row, or null. */
+		function restoreAnchorRange(row, anchor) {
+			return restoreRange(row, anchor);
+		}
+		//#endregion
 		//#region \0dsh-css:/Users/evan/Desktop/dsh-aside/packages/client-ui-aside/src/client/AsideDrawer.module.css.mjs
-		const css$2 = ".seqwXG_drawer{z-index:60;border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:12px;flex-direction:column;width:min(420px,100vw - 24px);display:flex;position:fixed;top:12px;bottom:12px;right:12px;overflow:hidden;box-shadow:0 12px 40px #0000002e}.seqwXG_header{border-bottom:1px solid var(--dsw-alias-line-weak,#7f7f7f40);padding:12px 44px 10px 14px;position:relative}.seqwXG_titleRow{align-items:center;gap:8px;display:flex}.seqwXG_title{text-overflow:ellipsis;white-space:nowrap;margin:0;font-size:15px;font-weight:600;overflow:hidden}.seqwXG_readonlyBadge{border:1px solid var(--dsw-alias-state-warning,#b26a00);color:var(--dsw-alias-state-warning,#b26a00);border-radius:999px;flex:none;padding:1px 8px;font-size:11px}.seqwXG_hint{color:var(--dsw-alias-text-secondary,#666);margin:6px 0 0;font-size:12px}.seqwXG_close{width:28px;height:28px;color:var(--dsw-alias-text-secondary,#666);cursor:pointer;background:0 0;border:none;border-radius:6px;font-size:20px;line-height:1;position:absolute;top:8px;right:10px}.seqwXG_close:hover{background:var(--dsw-alias-bg-hover,#0000000d)}.seqwXG_error{background:color-mix(in srgb, var(--dsw-alias-state-danger,#c00) 10%, transparent);color:var(--dsw-alias-state-danger,#c00);border-radius:8px;margin:8px 14px 0;padding:8px 10px;font-size:12px}.seqwXG_summaryStatus{color:var(--dsw-alias-text-secondary,#666);margin:8px 14px 0;font-size:12px}.seqwXG_messages{flex-direction:column;flex:1;gap:12px;padding:12px 14px;display:flex;overflow-y:auto}.seqwXG_status{color:var(--dsw-alias-text-secondary,#666);margin:0;font-size:13px}.seqwXG_row{flex-direction:column;gap:4px;display:flex}.seqwXG_role{color:var(--dsw-alias-text-secondary,#888);font-size:11px;font-weight:600}.seqwXG_userText{white-space:pre-wrap;word-break:break-word;margin:0;font-size:13px}.seqwXG_toolRow{background:var(--dsw-alias-bg-hover,#0000000d);color:var(--dsw-alias-text-secondary,#666);border-radius:999px;align-self:flex-start;padding:3px 10px;font-size:12px}.seqwXG_composer{border-top:1px solid var(--dsw-alias-line-weak,#7f7f7f40);flex-direction:column;gap:8px;padding:10px 14px 14px;display:flex}.seqwXG_prefillHint{color:var(--dsw-alias-text-secondary,#666);margin:0;font-size:12px}.seqwXG_input{border:1px solid var(--dsw-alias-line-weak,#7f7f7f59);background:var(--dsw-alias-bg-base,#fafafa);width:100%;min-height:84px;max-height:200px;font:inherit;resize:vertical;border-radius:8px;padding:8px 10px;font-size:13px}.seqwXG_send{background:var(--dsw-alias-state-business-primary,#1a6bff);color:#fff;font:inherit;cursor:pointer;border:none;border-radius:8px;align-self:flex-end;padding:6px 18px;font-size:13px}.seqwXG_send:disabled{opacity:.5;cursor:not-allowed}";
+		const css$2 = ".seqwXG_drawer{z-index:60;border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:12px;flex-direction:column;width:min(420px,100vw - 24px);animation:.2s ease-out seqwXG_aside-drawer-in;display:flex;position:fixed;top:12px;bottom:12px;right:12px;overflow:hidden;box-shadow:0 12px 40px #0000002e}@keyframes seqwXG_aside-drawer-in{0%{opacity:0;transform:translate(12px)}to{opacity:1;transform:translate(0)}}.seqwXG_drawer.seqwXG_closing{pointer-events:none;animation:.16s ease-in forwards seqwXG_aside-drawer-out}@keyframes seqwXG_aside-drawer-out{0%{opacity:1;transform:translate(0)}to{opacity:0;transform:translate(12px)}}@media (prefers-reduced-motion:reduce){.seqwXG_drawer,.seqwXG_drawer.seqwXG_closing{animation:none}}.seqwXG_header{border-bottom:1px solid var(--dsw-alias-line-weak,#7f7f7f40);padding:12px 44px 10px 14px;position:relative}.seqwXG_titleRow{align-items:center;gap:8px;min-width:0;display:flex}.seqwXG_kindLabel{color:var(--dsw-alias-state-business-primary,#1a6bff);flex:none;font-size:12px;font-weight:600}.seqwXG_title{text-overflow:ellipsis;white-space:nowrap;margin:0;font-size:15px;font-weight:600;overflow:hidden}.seqwXG_readonlyBadge{border:1px solid var(--dsw-alias-state-warning,#b26a00);color:var(--dsw-alias-state-warning,#b26a00);border-radius:999px;flex:none;padding:1px 8px;font-size:11px}.seqwXG_select{border:1px solid var(--dsw-alias-line-weak,#7f7f7f59);background:var(--dsw-alias-bg-base,#fafafa);max-width:150px;font:inherit;color:var(--dsw-alias-text-primary,#1a1a1a);border-radius:6px;padding:2px 4px;font-size:12px}.seqwXG_generating{color:var(--dsw-alias-text-secondary,#666);align-items:center;gap:5px;font-size:11px;display:inline-flex}.seqwXG_activityDot{background:var(--dsw-alias-state-business-primary,#1a6bff);border-radius:50%;width:6px;height:6px;animation:1.1s ease-in-out infinite seqwXG_aside-activity-pulse}@keyframes seqwXG_aside-activity-pulse{0%,to{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}@media (prefers-reduced-motion:reduce){.seqwXG_activityDot{animation:none}}.seqwXG_hint{color:var(--dsw-alias-text-secondary,#666);margin:6px 0 0;font-size:12px}.seqwXG_close{width:28px;height:28px;color:var(--dsw-alias-text-secondary,#666);cursor:pointer;background:0 0;border:none;border-radius:6px;font-size:20px;line-height:1;position:absolute;top:8px;right:10px}.seqwXG_close:hover{background:var(--dsw-alias-bg-hover,#0000000d)}.seqwXG_error,.seqwXG_notice{border-radius:8px;margin:8px 14px 0;padding:8px 10px;font-size:12px}.seqwXG_error{background:color-mix(in srgb, var(--dsw-alias-state-danger,#c00) 10%, transparent);color:var(--dsw-alias-state-danger,#c00)}.seqwXG_notice{background:var(--dsw-alias-bg-hover,#0000000d);color:var(--dsw-alias-text-secondary,#666)}.seqwXG_messages{flex-direction:column;flex:1;gap:12px;padding:12px 14px;display:flex;overflow-y:auto}.seqwXG_status{color:var(--dsw-alias-text-secondary,#666);margin:0;font-size:13px}.seqwXG_draftCard{border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-base,#fafafa);border-radius:10px;padding:12px}.seqwXG_draftLabel{color:var(--dsw-alias-text-secondary,#666);margin-bottom:6px;font-size:11px;font-weight:600;display:block}.seqwXG_draftQuote{border-left:2px solid var(--dsw-alias-state-business-primary,#1a6bff);color:var(--dsw-alias-text-primary,#1a1a1a);white-space:pre-wrap;margin:0 0 8px;padding-left:10px;font-size:13px;line-height:1.5}.seqwXG_row{flex-direction:column;gap:4px;animation:.16s ease-out seqwXG_aside-row-in;display:flex}@keyframes seqwXG_aside-row-in{0%{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}@media (prefers-reduced-motion:reduce){.seqwXG_row{animation:none}}.seqwXG_role{color:var(--dsw-alias-text-secondary,#888);font-size:11px;font-weight:600}.seqwXG_userText{white-space:pre-wrap;word-break:break-word;margin:0;font-size:13px}.seqwXG_toolRow{background:var(--dsw-alias-bg-hover,#0000000d);color:var(--dsw-alias-text-secondary,#666);border-radius:999px;align-self:flex-start;padding:3px 10px;font-size:12px}.seqwXG_backToBottom{border:1px solid var(--dsw-alias-line-weak,#7f7f7f59);background:var(--dsw-alias-bg-container,#fff);font:inherit;color:var(--dsw-alias-text-primary,#1a1a1a);cursor:pointer;border-radius:999px;padding:4px 12px;font-size:12px;position:absolute;bottom:92px;right:24px;box-shadow:0 2px 8px #00000024}.seqwXG_composer{border-top:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);flex-direction:column;gap:8px;padding:10px 14px 14px;display:flex}.seqwXG_commandMenu{border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:8px;flex-direction:column;gap:2px;padding:4px;display:flex;box-shadow:0 4px 14px #0000001a}.seqwXG_commandItem{color:var(--dsw-alias-text-primary,#1a1a1a);cursor:pointer;text-align:left;background:0 0;border:none;border-radius:6px;padding:6px 8px;font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace}.seqwXG_commandItem:hover,.seqwXG_commandItem:focus-visible{background:var(--dsw-alias-bg-hover,#0000000d);outline:none}.seqwXG_input{border:1px solid var(--dsw-alias-line-weak,#7f7f7f59);background:var(--dsw-alias-bg-base,#fafafa);width:100%;min-height:84px;max-height:200px;font:inherit;resize:vertical;border-radius:8px;padding:8px 10px;font-size:13px}.seqwXG_composerToolbar,.seqwXG_toolbarStart,.seqwXG_toolbarEnd,.seqwXG_compactControl{align-items:center;display:flex}.seqwXG_composerToolbar{justify-content:space-between;gap:8px}.seqwXG_toolbarStart,.seqwXG_toolbarEnd{gap:6px;min-width:0}.seqwXG_compactControl{gap:4px;min-width:0}.seqwXG_commandTrigger{width:28px;height:28px;color:var(--dsw-alias-text-secondary,#666);font:inherit;cursor:pointer;background:0 0;border:none;border-radius:50%;justify-content:center;align-items:center;padding:0;font-size:18px;display:inline-flex}.seqwXG_commandTrigger:hover,.seqwXG_commandTrigger:focus-visible{background:var(--dsw-alias-bg-hover,#0000000d);outline:none}.seqwXG_toolbarEnd .seqwXG_select{max-width:150px}.seqwXG_send{background:var(--dsw-alias-state-business-primary,#1a6bff);color:#fff;width:32px;height:32px;font:inherit;cursor:pointer;border:none;border-radius:50%;flex:none;padding:0;font-size:19px;line-height:1}.seqwXG_send:disabled{opacity:.5;cursor:not-allowed}@media (width<=520px){.seqwXG_composerToolbar{flex-direction:column;align-items:flex-start}.seqwXG_toolbarEnd{justify-content:flex-end;width:100%}}";
 		const tagId$2 = "@ywzhang1031/dsh-client-ui-aside/AsideDrawer.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4009,23 +4997,42 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var AsideDrawer_module_css_default = {
+			"activityDot": "seqwXG_activityDot",
+			"aside-activity-pulse": "seqwXG_aside-activity-pulse",
+			"aside-drawer-in": "seqwXG_aside-drawer-in",
+			"aside-drawer-out": "seqwXG_aside-drawer-out",
+			"aside-row-in": "seqwXG_aside-row-in",
+			"backToBottom": "seqwXG_backToBottom",
 			"close": "seqwXG_close",
+			"closing": "seqwXG_closing",
+			"commandItem": "seqwXG_commandItem",
+			"commandMenu": "seqwXG_commandMenu",
+			"commandTrigger": "seqwXG_commandTrigger",
+			"compactControl": "seqwXG_compactControl",
 			"composer": "seqwXG_composer",
+			"composerToolbar": "seqwXG_composerToolbar",
+			"draftCard": "seqwXG_draftCard",
+			"draftLabel": "seqwXG_draftLabel",
+			"draftQuote": "seqwXG_draftQuote",
 			"drawer": "seqwXG_drawer",
 			"error": "seqwXG_error",
+			"generating": "seqwXG_generating",
 			"header": "seqwXG_header",
 			"hint": "seqwXG_hint",
 			"input": "seqwXG_input",
+			"kindLabel": "seqwXG_kindLabel",
 			"messages": "seqwXG_messages",
-			"prefillHint": "seqwXG_prefillHint",
+			"notice": "seqwXG_notice",
 			"readonlyBadge": "seqwXG_readonlyBadge",
 			"role": "seqwXG_role",
 			"row": "seqwXG_row",
+			"select": "seqwXG_select",
 			"send": "seqwXG_send",
 			"status": "seqwXG_status",
-			"summaryStatus": "seqwXG_summaryStatus",
 			"title": "seqwXG_title",
 			"titleRow": "seqwXG_titleRow",
+			"toolbarEnd": "seqwXG_toolbarEnd",
+			"toolbarStart": "seqwXG_toolbarStart",
 			"toolRow": "seqwXG_toolRow",
 			"userText": "seqwXG_userText"
 		};
@@ -4035,25 +5042,59 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* Side-conversation drawer over the frame-wide overlay slot: a compact
 		* read-only chat panel. It opens as a DRAFT bound to one prose selection
 		* (empty composer); the first send creates the forked aside, asks the
-		* question with the anchored source attached, and only then does the
-		* selection become a highlightable anchor. Closing an unanswered draft
-		* leaves nothing behind. Existing asides reopen for follow-up questions.
+		* anchored source durably first, sends the question, and only then does the
+		* selection become a highlightable anchor. One stable composer shows the
+		* model/reasoning selection, fixed read-only posture, and command entry in
+		* both draft and durable states; draft choices apply to the child before its
+		* first prompt instead of mutating the parent.
+		* History streams via adaptive polling (fast while generating, backing off
+		* when idle, stopping when hidden/closed) with autoscroll.
 		* @module @ywzhang1031/dsh-client-ui-aside/AsideDrawer
 		*/
+		/** The command whitelist allowed inside an aside (first version). */
+		const ASIDE_COMMANDS = /* @__PURE__ */ new Set([
+			"model",
+			"compact",
+			"export",
+			"feedback"
+		]);
+		/** Commands deliberately blocked in an aside, reported with a clear error. */
+		const BLOCKED_COMMANDS = /* @__PURE__ */ new Set([
+			"permission",
+			"plan",
+			"goal"
+		]);
+		/** Strip the durable anchor marker line from a first user message for display. */
+		function cleanUserText(text) {
+			return text.replace(/\[aside:[^\]]+\]/g, "").replace(/\n*---\n引用原文：\n[\s\S]*$/u, "").trim();
+		}
+		/** Extract the plain text of a content-block array. */
+		function textOf$1(blocks) {
+			return (Array.isArray(blocks) ? blocks : []).filter((block) => typeof block === "object" && block !== null && block.type === "text").map((block) => block.text ?? "").join("\n").trim();
+		}
 		/**
-		* Project raw history events into display rows: user/assistant surface
-		* messages and tool-call heads; every other event type is invisible.
-		* `assistant/message` carries its message nested under `data.message`
-		* (the canonical event shape), while `user/message` is the message itself.
+		* Project raw history events into display rows: discard the inherited parent
+		* seed through this aside's own (last) durable anchor marker, then surface
+		* user/assistant messages and tool-call heads. The last marker matters for a
+		* nested aside because its inherited seed may contain an ancestor's marker.
 		*/
 		function projectHistory(entries) {
+			let ownAnchorIndex = -1;
+			for (let index = entries.length - 1; index >= 0; index -= 1) {
+				const event = entries[index]?.event;
+				if (event?.type !== "user/message") continue;
+				const data = event.data;
+				if (parseAnchor(textOf$1(data?.content)) !== void 0) {
+					ownAnchorIndex = index;
+					break;
+				}
+			}
 			const rows = [];
-			const textOf = (blocks) => (Array.isArray(blocks) ? blocks : []).filter((block) => typeof block === "object" && block !== null && block.type === "text").map((block) => block.text ?? "").join("\n").trim();
-			for (const entry of entries) {
+			for (const entry of entries.slice(ownAnchorIndex + 1)) {
 				const event = entry.event;
 				if (event.type === "user/message") {
 					const data = event.data;
-					const text = textOf(data?.content);
+					const text = cleanUserText(textOf$1(data?.content));
 					if (text === "") continue;
 					rows.push({
 						kind: "user",
@@ -4061,7 +5102,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					});
 				} else if (event.type === "assistant/message") {
 					const data = event.data;
-					const text = textOf(data?.message?.content);
+					const text = textOf$1(data?.message?.content);
 					if (text === "") continue;
 					rows.push({
 						kind: "assistant",
@@ -4077,54 +5118,243 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			}
 			return rows;
 		}
-		const POLL_MS = 800;
+		/** Whether the history tail looks like a turn is still generating. */
+		function isGenerating(entries) {
+			const last = entries[entries.length - 1];
+			if (last === void 0) return false;
+			switch (last.event.type) {
+				case "turn/start":
+				case "step/start":
+				case "assistant/chunk":
+				case "tool/call": return true;
+				default: return false;
+			}
+		}
+		const FAST_MS = 700;
+		const SLOW_MS = 2500;
 		function AsideDrawer({ store, api, onFirstSend, t }) {
 			const state = (0, react.useSyncExternalStore)((listener) => store.subscribe(listener), () => store.get());
 			const subSessionId = state.subSessionId;
 			const [rows, setRows] = (0, react.useState)([]);
 			const [value, setValue] = (0, react.useState)("");
 			const [sending, setSending] = (0, react.useState)(false);
+			const [generating, setGenerating] = (0, react.useState)(false);
+			const [closing, setClosing] = (0, react.useState)(false);
 			const [loaded, setLoaded] = (0, react.useState)(false);
+			const [directory, setDirectory] = (0, react.useState)(null);
+			const [directorySessionId, setDirectorySessionId] = (0, react.useState)(null);
+			const [notice, setNotice] = (0, react.useState)(null);
 			const inputRef = (0, react.useRef)(null);
+			const modelRef = (0, react.useRef)(null);
+			const messagesRef = (0, react.useRef)(null);
+			const closeTimerRef = (0, react.useRef)(void 0);
+			const atBottomRef = (0, react.useRef)(true);
+			const composingRef = (0, react.useRef)(false);
+			const [atBottom, setAtBottom] = (0, react.useState)(true);
+			const onCompositionStart = () => {
+				composingRef.current = true;
+			};
+			const onCompositionEnd = () => {
+				setTimeout(() => {
+					composingRef.current = false;
+				}, 10);
+			};
 			(0, react.useEffect)(() => {
 				if (subSessionId === null && !state.draft) return;
+				if (closeTimerRef.current !== void 0) clearTimeout(closeTimerRef.current);
+				closeTimerRef.current = void 0;
+				setClosing(false);
 				setValue("");
+				setNotice(null);
 				inputRef.current?.focus();
 			}, [subSessionId, state.draft]);
 			(0, react.useEffect)(() => {
 				if (subSessionId === null) {
 					setRows([]);
 					setLoaded(false);
+					setGenerating(false);
 					return;
 				}
 				let disposed = false;
+				let timer;
+				let inflight = false;
+				const controller = new AbortController();
+				const schedule = (ms) => {
+					if (disposed) return;
+					if (timer !== void 0) clearTimeout(timer);
+					if (typeof document !== "undefined" && document.hidden) return;
+					timer = setTimeout(() => {
+						refresh();
+					}, ms);
+				};
 				const refresh = async () => {
+					if (disposed || inflight) return;
+					inflight = true;
 					try {
 						const response = await api.sessions.history({
 							sessionId: subSessionId,
 							maxMessages: 100
-						});
+						}, controller.signal);
 						if (disposed) return;
-						if (response.result.ok) setRows(projectHistory(response.result.value.events));
-					} catch {} finally {
-						if (!disposed) setLoaded(true);
+						if (response.result.ok) {
+							const generatingNow = isGenerating(response.result.value.events);
+							setRows(projectHistory(response.result.value.events));
+							setLoaded(true);
+							setGenerating(generatingNow);
+							schedule(generatingNow ? FAST_MS : SLOW_MS);
+						} else schedule(SLOW_MS);
+					} catch {
+						if (!disposed) schedule(SLOW_MS);
+					} finally {
+						inflight = false;
 					}
 				};
-				refresh();
-				const timer = setInterval(() => {
+				const onVisibilityChange = () => {
+					if (disposed || document.hidden) return;
+					if (timer !== void 0) clearTimeout(timer);
+					timer = void 0;
 					refresh();
-				}, POLL_MS);
+				};
+				document.addEventListener("visibilitychange", onVisibilityChange);
+				refresh();
 				return () => {
 					disposed = true;
-					clearInterval(timer);
+					if (timer !== void 0) clearTimeout(timer);
+					document.removeEventListener("visibilitychange", onVisibilityChange);
+					controller.abort();
 				};
 			}, [subSessionId, api]);
+			const modelSessionId = subSessionId ?? (state.draft ? state.parentSessionId : null);
+			const loadDirectory = (0, react.useCallback)(async (signal) => {
+				if (modelSessionId === null) return;
+				try {
+					const response = await api.sessions.models({ sessionId: modelSessionId }, signal);
+					if (response.result.ok) {
+						setDirectory(response.result.value);
+						setDirectorySessionId(modelSessionId);
+					}
+				} catch {}
+			}, [modelSessionId, api]);
+			(0, react.useEffect)(() => {
+				if (modelSessionId === null) {
+					setDirectory(null);
+					setDirectorySessionId(null);
+					return;
+				}
+				setDirectorySessionId(null);
+				const controller = new AbortController();
+				loadDirectory(controller.signal);
+				return () => {
+					controller.abort();
+				};
+			}, [modelSessionId, loadDirectory]);
+			const onScroll = (0, react.useCallback)(() => {
+				const el = messagesRef.current;
+				if (el === null) return;
+				const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+				atBottomRef.current = nearBottom;
+				setAtBottom(nearBottom);
+			}, []);
+			(0, react.useEffect)(() => {
+				const el = messagesRef.current;
+				if (el === null || !atBottomRef.current) return;
+				el.scrollTop = el.scrollHeight;
+			}, [rows, subSessionId]);
+			const scrollToBottom = (0, react.useCallback)(() => {
+				const el = messagesRef.current;
+				if (el !== null) el.scrollTop = el.scrollHeight;
+				atBottomRef.current = true;
+				setAtBottom(true);
+			}, []);
+			const selectModel = async (providerModel) => {
+				if (directory === null) return;
+				const separator = providerModel.indexOf("\0");
+				const provider = separator === -1 ? providerModel : providerModel.slice(0, separator);
+				const model = separator === -1 ? "" : providerModel.slice(separator + 1);
+				if (state.draft || subSessionId === null) {
+					const definition = directory.groups.find((group) => group.id === provider)?.models.find((item) => item.id === model);
+					setDirectory({
+						...directory,
+						current: {
+							provider,
+							model,
+							...definition?.reasoning?.defaultEffort === void 0 ? {} : { reasoningEffort: definition.reasoning.defaultEffort }
+						}
+					});
+					return;
+				}
+				try {
+					const response = await api.sessions.selectModel({
+						sessionId: subSessionId,
+						provider,
+						model
+					});
+					if (!response.result.ok) {
+						setNotice(t("commandError", { message: response.result.error.message }));
+						return;
+					}
+					loadDirectory();
+				} catch (error) {
+					setNotice(t("commandError", { message: error instanceof Error ? error.message : String(error) }));
+				}
+			};
+			const selectReasoning = async (effort) => {
+				if (directory === null) return;
+				const { provider, model } = directory.current;
+				if (state.draft || subSessionId === null) {
+					setDirectory({
+						...directory,
+						current: {
+							provider,
+							model,
+							...effort === "" ? {} : { reasoningEffort: effort }
+						}
+					});
+					return;
+				}
+				try {
+					const response = await api.sessions.selectModel({
+						sessionId: subSessionId,
+						provider,
+						model,
+						...effort === "" ? {} : { reasoningEffort: effort }
+					});
+					if (!response.result.ok) {
+						setNotice(t("commandError", { message: response.result.error.message }));
+						return;
+					}
+					loadDirectory();
+				} catch (error) {
+					setNotice(t("commandError", { message: error instanceof Error ? error.message : String(error) }));
+				}
+			};
 			const send = async () => {
 				if (sending || value.trim() === "") return;
+				const trimmed = value.trim();
+				const isDraft = state.draft || subSessionId === null;
+				if (trimmed.startsWith("/")) {
+					const name = trimmed.slice(1).split(/\s+/)[0] ?? "";
+					if (BLOCKED_COMMANDS.has(name)) {
+						setNotice(t("commandNotAllowed", { command: `/${name}` }));
+						return;
+					}
+					if (!ASIDE_COMMANDS.has(name)) {
+						setNotice(t("unknownCommand", { command: `/${name}` }));
+						return;
+					}
+					if (isDraft) {
+						setNotice(t("draftNoCommand"));
+						return;
+					}
+				}
 				setSending(true);
 				try {
-					if (state.draft || subSessionId === null) {
-						if (await onFirstSend(value)) setValue("");
+					if (isDraft) {
+						if (await onFirstSend(trimmed, directory === null || directorySessionId !== modelSessionId ? void 0 : {
+							provider: directory.current.provider,
+							model: directory.current.model,
+							...directory.current.reasoningEffort === void 0 ? {} : { reasoningEffort: directory.current.reasoningEffort }
+						})) setValue("");
 						return;
 					}
 					const response = await api.sessions.prompt({
@@ -4132,32 +5362,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 						mode: "queue",
 						content: [{
 							type: "text",
-							text: value
+							text: trimmed
 						}]
 					});
 					if (!response.result.ok) {
-						store.setError(response.result.error.message);
+						setNotice(response.result.error.code === "unknown-command" ? t("unknownCommand", { command: trimmed }) : t("commandError", { message: response.result.error.message }));
 						return;
 					}
 					setValue("");
-					const history = await api.sessions.history({
-						sessionId: subSessionId,
-						maxMessages: 100
-					});
-					if (history.result.ok) setRows(projectHistory(history.result.value.events));
 				} catch (error) {
-					store.setError(error instanceof Error ? error.message : String(error));
+					setNotice(t("commandError", { message: error instanceof Error ? error.message : String(error) }));
 				} finally {
 					setSending(false);
 				}
 			};
 			const title = (0, react.useMemo)(() => {
-				const compact = state.anchorText.replace(/\s+/g, " ").trim();
-				return compact.length > 40 ? `${compact.slice(0, 40)}…` : compact;
-			}, [state.anchorText]);
+				return state.anchor === null ? "" : anchorSummary(state.anchor.exact, 40);
+			}, [state.anchor]);
+			const currentEffort = directory?.current.reasoningEffort;
+			const currentModelKey = directory === null ? "" : `${directory.current.provider}\u0000${directory.current.model}`;
+			const currentModelDefinition = directory === null ? void 0 : directory.groups.find((group) => group.id === directory.current.provider)?.models.find((model) => model.id === directory.current.model);
+			const reasoningEfforts = currentModelDefinition?.reasoning?.efforts ?? [];
+			const drawerIsDraft = state.draft || subSessionId === null;
+			const commandMatch = /^\/([^\s]*)$/.exec(value.trimStart());
+			const commandOptions = commandMatch === null ? [] : [...ASIDE_COMMANDS].filter((command) => command.startsWith(commandMatch[1] ?? ""));
+			const chooseCommand = (command) => {
+				if (drawerIsDraft) {
+					setValue("");
+					if (command === "model") {
+						setNotice(t("draftModelCommand"));
+						modelRef.current?.focus();
+					} else setNotice(t("draftNoCommand"));
+					return;
+				}
+				setValue(`/${command} `);
+				inputRef.current?.focus();
+			};
+			const closeDrawer = () => {
+				if (closing) return;
+				if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+					store.close();
+					return;
+				}
+				setClosing(true);
+				closeTimerRef.current = setTimeout(() => {
+					closeTimerRef.current = void 0;
+					store.close();
+					setClosing(false);
+				}, 160);
+			};
+			(0, react.useEffect)(() => () => {
+				if (closeTimerRef.current !== void 0) clearTimeout(closeTimerRef.current);
+			}, []);
 			if (subSessionId === null && !state.draft) return null;
 			return (0, react_jsx_runtime.jsxs)("aside", {
-				className: AsideDrawer_module_css_default.drawer,
+				className: `${AsideDrawer_module_css_default.drawer}${closing ? ` ${AsideDrawer_module_css_default.closing}` : ""}`,
 				role: "dialog",
 				"aria-label": t("title"),
 				children: [
@@ -4166,13 +5425,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 						children: [
 							(0, react_jsx_runtime.jsxs)("div", {
 								className: AsideDrawer_module_css_default.titleRow,
-								children: [(0, react_jsx_runtime.jsx)("h2", {
+								children: [(0, react_jsx_runtime.jsx)("span", {
+									className: AsideDrawer_module_css_default.kindLabel,
+									children: t("title")
+								}), (0, react_jsx_runtime.jsx)("h2", {
 									className: AsideDrawer_module_css_default.title,
-									title: state.anchorText,
+									title: state.anchor?.exact,
 									children: title
-								}), (0, react_jsx_runtime.jsx)("span", {
-									className: AsideDrawer_module_css_default.readonlyBadge,
-									children: t("readonlyBadge")
 								})]
 							}),
 							(0, react_jsx_runtime.jsx)("p", {
@@ -4183,9 +5442,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 								type: "button",
 								className: AsideDrawer_module_css_default.close,
 								"aria-label": t("close"),
-								onClick: () => {
-									store.close();
-								},
+								onClick: closeDrawer,
 								children: "×"
 							})
 						]
@@ -4195,12 +5452,32 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 						role: "alert",
 						children: t("error", { message: state.error })
 					}),
+					notice !== null && (0, react_jsx_runtime.jsx)("p", {
+						className: AsideDrawer_module_css_default.notice,
+						role: "status",
+						children: notice
+					}),
 					(0, react_jsx_runtime.jsxs)("div", {
+						ref: messagesRef,
 						className: AsideDrawer_module_css_default.messages,
+						onScroll,
 						children: [
-							state.draft && (0, react_jsx_runtime.jsx)("p", {
-								className: AsideDrawer_module_css_default.status,
-								children: t("draftHint")
+							state.draft && (0, react_jsx_runtime.jsxs)("div", {
+								className: AsideDrawer_module_css_default.draftCard,
+								children: [
+									(0, react_jsx_runtime.jsx)("span", {
+										className: AsideDrawer_module_css_default.draftLabel,
+										children: t("sourceLabel")
+									}),
+									(0, react_jsx_runtime.jsx)("blockquote", {
+										className: AsideDrawer_module_css_default.draftQuote,
+										children: state.anchor?.exact
+									}),
+									(0, react_jsx_runtime.jsx)("p", {
+										className: AsideDrawer_module_css_default.status,
+										children: t("draftHint")
+									})
+								]
 							}),
 							!state.draft && !loaded && rows.length === 0 && (0, react_jsx_runtime.jsx)("p", {
 								className: AsideDrawer_module_css_default.status,
@@ -4226,115 +5503,154 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 							}, index))
 						]
 					}),
+					!atBottom && rows.length > 0 && (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: AsideDrawer_module_css_default.backToBottom,
+						onClick: scrollToBottom,
+						children: t("backToBottom")
+					}),
 					(0, react_jsx_runtime.jsxs)("div", {
 						className: AsideDrawer_module_css_default.composer,
-						children: [(0, react_jsx_runtime.jsx)("textarea", {
-							ref: inputRef,
-							className: AsideDrawer_module_css_default.input,
-							value,
-							placeholder: t("placeholder"),
-							onChange: (event) => {
-								setValue(event.currentTarget.value);
-							},
-							onKeyDown: (event) => {
-								if (event.key === "Enter" && !event.shiftKey) {
+						children: [
+							commandOptions.length > 0 && (0, react_jsx_runtime.jsx)("div", {
+								className: AsideDrawer_module_css_default.commandMenu,
+								role: "listbox",
+								"aria-label": t("commandHint"),
+								children: commandOptions.map((command) => (0, react_jsx_runtime.jsxs)("button", {
+									type: "button",
+									className: AsideDrawer_module_css_default.commandItem,
+									role: "option",
+									"aria-selected": "false",
+									onClick: () => {
+										chooseCommand(command);
+									},
+									children: ["/", command]
+								}, command))
+							}),
+							(0, react_jsx_runtime.jsx)("textarea", {
+								ref: inputRef,
+								className: AsideDrawer_module_css_default.input,
+								value,
+								placeholder: t("commandPlaceholder"),
+								onChange: (event) => {
+									setValue(event.currentTarget.value);
+								},
+								onKeyDown: (event) => {
+									if (event.key === "Enter" && event.shiftKey) return;
+									const composing = composingRef.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
+									if (event.key === "Escape") {
+										if (composing) return;
+										event.preventDefault();
+										closeDrawer();
+										return;
+									}
+									if (event.key !== "Enter" || composing) return;
 									event.preventDefault();
+									if (event.repeat) return;
 									send();
-								}
-							}
-						}), (0, react_jsx_runtime.jsx)("button", {
-							type: "button",
-							className: AsideDrawer_module_css_default.send,
-							disabled: sending || value.trim() === "",
-							onClick: () => {
-								send();
-							},
-							children: sending ? t("sending") : t("send")
-						})]
+								},
+								onCompositionStart,
+								onCompositionEnd
+							}),
+							(0, react_jsx_runtime.jsxs)("div", {
+								className: AsideDrawer_module_css_default.composerToolbar,
+								children: [(0, react_jsx_runtime.jsxs)("div", {
+									className: AsideDrawer_module_css_default.toolbarStart,
+									children: [
+										(0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: AsideDrawer_module_css_default.commandTrigger,
+											"aria-label": t("commandHint"),
+											title: t("commandHint"),
+											onClick: () => {
+												setValue("/");
+												inputRef.current?.focus();
+											},
+											children: (0, react_jsx_runtime.jsx)("span", {
+												"aria-hidden": "true",
+												children: "＋"
+											})
+										}),
+										(0, react_jsx_runtime.jsxs)("span", {
+											className: AsideDrawer_module_css_default.readonlyBadge,
+											title: t("readonlyHint"),
+											children: ["🔒 ", t("readOnlyLabel")]
+										}),
+										generating && (0, react_jsx_runtime.jsxs)("span", {
+											className: AsideDrawer_module_css_default.generating,
+											role: "status",
+											children: [(0, react_jsx_runtime.jsx)("span", { className: AsideDrawer_module_css_default.activityDot }), t("generating")]
+										})
+									]
+								}), (0, react_jsx_runtime.jsxs)("div", {
+									className: AsideDrawer_module_css_default.toolbarEnd,
+									children: [
+										(0, react_jsx_runtime.jsx)("label", {
+											className: AsideDrawer_module_css_default.compactControl,
+											title: t("modelLabel"),
+											children: (0, react_jsx_runtime.jsxs)("select", {
+												ref: modelRef,
+												className: AsideDrawer_module_css_default.select,
+												value: currentModelKey,
+												"aria-label": t("modelLabel"),
+												disabled: directory === null || directorySessionId !== modelSessionId || sending || generating,
+												onChange: (event) => {
+													selectModel(event.currentTarget.value);
+												},
+												children: [currentModelKey !== "" && (0, react_jsx_runtime.jsx)("option", {
+													value: currentModelKey,
+													children: currentModelDefinition?.name ?? directory?.current.model ?? currentModelKey
+												}), directory?.groups.flatMap((group) => group.models.map((model) => ({
+													key: `${group.id}\u0000${model.id}`,
+													label: `${group.name} · ${model.name}`
+												}))).filter((option) => option.key !== currentModelKey).map((option) => (0, react_jsx_runtime.jsx)("option", {
+													value: option.key,
+													children: option.label
+												}, option.key))]
+											})
+										}),
+										(0, react_jsx_runtime.jsx)("label", {
+											className: AsideDrawer_module_css_default.compactControl,
+											title: t("reasoningLabel"),
+											children: (0, react_jsx_runtime.jsxs)("select", {
+												className: AsideDrawer_module_css_default.select,
+												value: currentEffort ?? "",
+												"aria-label": t("reasoningLabel"),
+												disabled: directory === null || directorySessionId !== modelSessionId || sending || generating,
+												onChange: (event) => {
+													selectReasoning(event.currentTarget.value);
+												},
+												children: [(0, react_jsx_runtime.jsx)("option", {
+													value: "",
+													children: t("defaultReasoning")
+												}), reasoningEfforts.map((effort) => (0, react_jsx_runtime.jsx)("option", {
+													value: effort.id,
+													children: effort.name
+												}, effort.id))]
+											})
+										}),
+										(0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: AsideDrawer_module_css_default.send,
+											"aria-label": sending ? t("sending") : t("send"),
+											title: sending ? t("sending") : t("send"),
+											disabled: sending || value.trim() === "",
+											onClick: () => {
+												send();
+											},
+											children: sending ? "…" : "↑"
+										})
+									]
+								})]
+							})
+						]
 					})
 				]
 			});
 		}
 		//#endregion
-		//#region lib/types/client/fold.js
-		/**
-		* Sidebar folds over raw history entries: produced-file paths and web-search
-		* sources, both extracted from settled `tool/result` metadata — the same
-		* durable facts the tool cards present, folded across the whole conversation
-		* instead of one turn. Pure functions; the sidebar component supplies the
-		* history entries and the refresh cadence.
-		* @module @ywzhang1031/dsh-client-ui-aside/fold
-		*/
-		/** Whether a tool/result payload is a mutation (write/edit) outcome. */
-		function isMutationMeta(meta) {
-			return typeof meta === "object" && meta !== null && ("path" in meta || "diffs" in meta || "locations" in meta);
-		}
-		/** Collect one path from a location-ish value, deduplicating through the set. */
-		function collectPath(value, seen, out) {
-			if (typeof value !== "object" || value === null) return;
-			const path = value.path;
-			if (typeof path !== "string" || path === "" || seen.has(path)) return;
-			seen.add(path);
-			out.push({
-				path,
-				name: path.split(/[/\\]/).pop() ?? path
-			});
-		}
-		/** Fold every produced file path out of settled tool results. */
-		function foldArtifacts(entries) {
-			const seen = /* @__PURE__ */ new Set();
-			const out = [];
-			for (const entry of entries) {
-				const event = entry.event;
-				if (event.type !== "tool/result") continue;
-				const data = event.data;
-				if (data?.isError === true || data?.meta === void 0) continue;
-				const meta = data.meta;
-				if (!isMutationMeta(meta)) continue;
-				if (typeof meta.path === "string") collectPath({ path: meta.path }, seen, out);
-				const locations = Array.isArray(meta.locations) ? meta.locations : [];
-				const diffs = Array.isArray(meta.diffs) ? meta.diffs : [];
-				for (const location of locations) collectPath(location, seen, out);
-				for (const diff of diffs) collectPath(diff, seen, out);
-			}
-			return out;
-		}
-		/** Whether a tool/result payload is a web-search outcome with sources. */
-		function isSearchMeta(meta) {
-			return typeof meta === "object" && meta !== null && "sources" in meta;
-		}
-		/** Fold every web-search source out of settled tool results. */
-		function foldSources(entries) {
-			const seen = /* @__PURE__ */ new Set();
-			const out = [];
-			for (const entry of entries) {
-				const event = entry.event;
-				if (event.type !== "tool/result") continue;
-				const data = event.data;
-				if (data?.meta === void 0 || !isSearchMeta(data.meta)) continue;
-				const sources = Array.isArray(data.meta.sources) ? data.meta.sources : [];
-				for (const source of sources) {
-					if (typeof source !== "object" || source === null) continue;
-					const record = source;
-					const title = typeof record.title === "string" ? record.title : "";
-					const url = typeof record.url === "string" ? record.url : "";
-					if (url === "" || seen.has(url)) continue;
-					seen.add(url);
-					const meta = [];
-					if (typeof record.snippet === "string" && record.snippet !== "") meta.push(record.snippet);
-					if (typeof record.publishedAt === "string" && record.publishedAt !== "") meta.push(`(${record.publishedAt})`);
-					out.push({
-						title: title === "" ? url : title,
-						url,
-						...meta.length > 0 ? { meta: meta.join(" — ") } : {}
-					});
-				}
-			}
-			return out;
-		}
-		//#endregion
 		//#region \0dsh-css:/Users/evan/Desktop/dsh-aside/packages/client-ui-aside/src/client/AsideSidebar.module.css.mjs
-		const css$1 = ".P7Ci5G_sidebar{z-index:40;pointer-events:auto;flex-direction:column;gap:8px;width:268px;max-height:calc(100vh - 24px);display:flex;position:fixed;top:12px;right:12px}.P7Ci5G_section{border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:10px;overflow:hidden;box-shadow:0 4px 18px #00000014}.P7Ci5G_sectionHead{width:100%;font:inherit;color:var(--dsw-alias-text-primary,#1a1a1a);cursor:pointer;text-align:left;background:0 0;border:none;justify-content:space-between;align-items:center;padding:8px 12px;font-size:12px;font-weight:600;display:flex}.P7Ci5G_sectionHead:hover{background:var(--dsw-alias-bg-hover,#0000000a)}.P7Ci5G_count{background:var(--dsw-alias-bg-hover,#0000000f);color:var(--dsw-alias-text-secondary,#666);border-radius:999px;padding:0 8px;font-size:11px;font-weight:500}.P7Ci5G_list{flex-direction:column;gap:2px;max-height:240px;margin:0;padding:0 6px 8px;list-style:none;display:flex;overflow-y:auto}.P7Ci5G_empty{color:var(--dsw-alias-text-secondary,#888);padding:4px 8px;font-size:12px}.P7Ci5G_asideEntry,.P7Ci5G_artifactEntry{width:100%;font:inherit;color:var(--dsw-alias-state-business-primary,#1a6bff);text-align:left;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:none;border-radius:6px;padding:5px 8px;font-size:12px;overflow:hidden}.P7Ci5G_asideEntry:hover,.P7Ci5G_artifactEntry:hover{background:var(--dsw-alias-bg-hover,#0000000d);text-underline-offset:2px;text-decoration:underline}.P7Ci5G_asideText{text-overflow:ellipsis;white-space:nowrap;display:block;overflow:hidden}.P7Ci5G_sourceEntry{color:var(--dsw-alias-state-business-primary,#1a6bff);text-overflow:ellipsis;white-space:nowrap;border-radius:6px;padding:5px 8px;font-size:12px;text-decoration:none;display:block;overflow:hidden}.P7Ci5G_sourceEntry:hover{background:var(--dsw-alias-bg-hover,#0000000d);text-underline-offset:2px;text-decoration:underline}";
+		const css$1 = ".P7Ci5G_sidebar{z-index:40;pointer-events:auto;flex-direction:column;gap:8px;width:268px;max-height:calc(100vh - 24px);display:flex;position:fixed;top:12px;right:12px}.P7Ci5G_section{border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:10px;overflow:hidden;box-shadow:0 4px 18px #00000014}.P7Ci5G_sectionHead{width:100%;font:inherit;color:var(--dsw-alias-text-primary,#1a1a1a);cursor:pointer;text-align:left;background:0 0;border:none;justify-content:space-between;align-items:center;padding:8px 12px;font-size:12px;font-weight:600;display:flex}.P7Ci5G_sectionHead:hover{background:var(--dsw-alias-bg-hover,#0000000a)}.P7Ci5G_count{background:var(--dsw-alias-bg-hover,#0000000f);color:var(--dsw-alias-text-secondary,#666);border-radius:999px;padding:0 8px;font-size:11px;font-weight:500}.P7Ci5G_list{flex-direction:column;gap:2px;max-height:320px;margin:0;padding:0 6px 8px;list-style:none;display:flex;overflow-y:auto}.P7Ci5G_empty{color:var(--dsw-alias-text-secondary,#888);padding:4px 8px;font-size:12px}.P7Ci5G_asideEntry{width:100%;font:inherit;color:var(--dsw-alias-state-business-primary,#1a6bff);text-align:left;cursor:pointer;text-overflow:ellipsis;white-space:normal;background:0 0;border:none;border-radius:6px;flex-direction:column;gap:2px;padding:5px 8px;font-size:12px;display:flex;overflow:hidden}.P7Ci5G_asideEntry:hover{background:var(--dsw-alias-bg-hover,#0000000d);text-underline-offset:2px;text-decoration:underline}.P7Ci5G_asideEntry.P7Ci5G_active{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#1a6bff) 10%, transparent);box-shadow:inset 2px 0 0 var(--dsw-alias-state-business-primary,#1a6bff)}.P7Ci5G_asideText{text-overflow:ellipsis;white-space:nowrap;display:block;overflow:hidden}.P7Ci5G_asideTime{color:var(--dsw-alias-text-secondary,#888);text-overflow:ellipsis;white-space:nowrap;font-size:10px;text-decoration:none;display:block;overflow:hidden}";
 		const tagId$1 = "@ywzhang1031/dsh-client-ui-aside/AsideSidebar.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4344,178 +5660,110 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var AsideSidebar_module_css_default = {
-			"artifactEntry": "P7Ci5G_artifactEntry",
+			"active": "P7Ci5G_active",
 			"asideEntry": "P7Ci5G_asideEntry",
 			"asideText": "P7Ci5G_asideText",
+			"asideTime": "P7Ci5G_asideTime",
 			"count": "P7Ci5G_count",
 			"empty": "P7Ci5G_empty",
 			"list": "P7Ci5G_list",
 			"section": "P7Ci5G_section",
 			"sectionHead": "P7Ci5G_sectionHead",
-			"sidebar": "P7Ci5G_sidebar",
-			"sourceEntry": "P7Ci5G_sourceEntry"
+			"sidebar": "P7Ci5G_sidebar"
 		};
 		//#endregion
 		//#region lib/types/client/AsideSidebar.js
 		/**
-		* Codex-style frame sidebar: a standing right rail with three sections —
-		* produced files, web-search sources, and the aside chats anchored into the
-		* current main conversation. Artifacts open through the Host path opener;
-		* sources open in a new tab; aside entries reopen their side conversation in
-		* the drawer (the same target as an inline anchor click).
+		* Frame sidebar: a standing right rail listing the aside chats anchored into
+		* the current main conversation. Each entry opens its side conversation in
+		* the drawer and locates the parent message. The list comes from the Host
+		* repository cache (no localStorage, no history polling); switching the
+		* parent session triggers one `aside.list` refresh.
 		* @module @ywzhang1031/dsh-client-ui-aside/AsideSidebar
 		*/
-		const REFRESH_MS = 5e3;
-		function AsideSidebar({ anchors, sessions, api, onOpenAside, t }) {
+		/** Compact locale-aware timestamp for one sidebar row. */
+		function formatAsideTime(timestamp) {
+			return new Intl.DateTimeFormat(void 0, {
+				month: "short",
+				day: "numeric",
+				hour: "2-digit",
+				minute: "2-digit"
+			}).format(new Date(timestamp));
+		}
+		function AsideSidebar({ repository, drawer, sessions, onOpenAside, t }) {
 			const sessionId = (0, react.useSyncExternalStore)((listener) => sessions.subscribe(listener), () => sessions.getCurrent());
-			const anchorVersion = (0, react.useSyncExternalStore)((listener) => anchors.subscribe(listener), () => anchors.getVersion());
-			const [artifacts, setArtifacts] = (0, react.useState)([]);
-			const [sources, setSources] = (0, react.useState)([]);
-			const [open, setOpen] = (0, react.useState)(() => /* @__PURE__ */ new Set(["asides"]));
-			const asideEntries = (0, react.useMemo)(() => sessionId === null ? [] : [...anchors.list(sessionId)], [
-				anchors,
-				sessionId,
-				anchorVersion
-			]);
+			const version = (0, react.useSyncExternalStore)((listener) => repository.subscribe(listener), () => repository.getVersion());
+			(0, react.useSyncExternalStore)((listener) => drawer.subscribe(listener), () => drawer.getVersion());
+			const [open, setOpen] = (0, react.useState)(true);
+			const [loading, setLoading] = (0, react.useState)(false);
 			(0, react.useEffect)(() => {
 				if (sessionId === null) {
-					setArtifacts([]);
-					setSources([]);
+					repository.clear();
+					setLoading(false);
 					return;
 				}
 				let disposed = false;
-				const refresh = async () => {
-					try {
-						const response = await api.sessions.history({
-							sessionId,
-							maxMessages: 200
-						});
-						if (disposed || !response.result.ok) return;
-						setArtifacts(foldArtifacts(response.result.value.events));
-						setSources(foldSources(response.result.value.events));
-					} catch {}
-				};
-				refresh();
-				const timer = setInterval(() => {
-					refresh();
-				}, REFRESH_MS);
+				setLoading(true);
+				repository.refresh(sessionId).finally(() => {
+					if (!disposed) setLoading(false);
+				});
 				return () => {
 					disposed = true;
-					clearInterval(timer);
 				};
-			}, [sessionId, api]);
-			const toggle = (key) => {
-				setOpen((current) => {
-					const next = new Set(current);
-					if (next.has(key)) next.delete(key);
-					else next.add(key);
-					return next;
-				});
-			};
-			const openArtifact = (path) => {
-				api.host?.openPath?.({ path }).catch(() => {});
-			};
-			const openSource = (url) => {
-				window.open(url, "_blank", "noopener,noreferrer");
-			};
-			return (0, react_jsx_runtime.jsxs)("nav", {
+			}, [sessionId, repository]);
+			const entries = (0, react.useMemo)(() => {
+				return [...repository.list()].sort((left, right) => right.updatedAt - left.updatedAt);
+			}, [repository, version]);
+			const activeSubSessionId = drawer.get().subSessionId;
+			return (0, react_jsx_runtime.jsx)("nav", {
 				className: AsideSidebar_module_css_default.sidebar,
 				"aria-label": t("sidebarLabel"),
-				children: [
-					(0, react_jsx_runtime.jsxs)("section", {
-						className: AsideSidebar_module_css_default.section,
-						children: [(0, react_jsx_runtime.jsxs)("button", {
-							type: "button",
-							className: AsideSidebar_module_css_default.sectionHead,
-							"aria-expanded": open.has("asides"),
-							onClick: () => {
-								toggle("asides");
-							},
-							children: [(0, react_jsx_runtime.jsx)("span", { children: t("asidesTitle") }), (0, react_jsx_runtime.jsx)("span", {
-								className: AsideSidebar_module_css_default.count,
-								children: asideEntries.length
-							})]
-						}), open.has("asides") && (0, react_jsx_runtime.jsxs)("ul", {
-							className: AsideSidebar_module_css_default.list,
-							children: [asideEntries.length === 0 && (0, react_jsx_runtime.jsx)("li", {
+				children: (0, react_jsx_runtime.jsxs)("section", {
+					className: AsideSidebar_module_css_default.section,
+					children: [(0, react_jsx_runtime.jsxs)("button", {
+						type: "button",
+						className: AsideSidebar_module_css_default.sectionHead,
+						"aria-expanded": open,
+						onClick: () => {
+							setOpen((current) => !current);
+						},
+						children: [(0, react_jsx_runtime.jsx)("span", { children: t("asidesTitle") }), (0, react_jsx_runtime.jsx)("span", {
+							className: AsideSidebar_module_css_default.count,
+							children: entries.length
+						})]
+					}), open && (0, react_jsx_runtime.jsxs)("ul", {
+						className: AsideSidebar_module_css_default.list,
+						children: [
+							loading && entries.length === 0 && (0, react_jsx_runtime.jsx)("li", {
+								className: AsideSidebar_module_css_default.empty,
+								children: t("asidesLoading")
+							}),
+							!loading && entries.length === 0 && (0, react_jsx_runtime.jsx)("li", {
 								className: AsideSidebar_module_css_default.empty,
 								children: t("asidesEmpty")
-							}), asideEntries.map((anchor) => (0, react_jsx_runtime.jsx)("li", { children: (0, react_jsx_runtime.jsx)("button", {
+							}),
+							entries.map((record) => (0, react_jsx_runtime.jsx)("li", { children: (0, react_jsx_runtime.jsxs)("button", {
 								type: "button",
-								className: AsideSidebar_module_css_default.asideEntry,
-								title: anchor.text,
+								className: `${AsideSidebar_module_css_default.asideEntry}${record.subSessionId === activeSubSessionId ? ` ${AsideSidebar_module_css_default.active}` : ""}`,
+								title: record.anchor.exact,
+								"aria-label": `${t("openAside")}: ${asideText(record)}`,
+								"aria-current": record.subSessionId === activeSubSessionId ? "true" : void 0,
 								onClick: () => {
-									onOpenAside(anchor);
+									onOpenAside(record);
 								},
-								children: (0, react_jsx_runtime.jsx)("span", {
+								children: [(0, react_jsx_runtime.jsx)("span", {
 									className: AsideSidebar_module_css_default.asideText,
-									children: anchor.text.replace(/\s+/g, " ").slice(0, 60)
-								})
-							}) }, anchor.subSessionId))]
-						})]
-					}),
-					(0, react_jsx_runtime.jsxs)("section", {
-						className: AsideSidebar_module_css_default.section,
-						children: [(0, react_jsx_runtime.jsxs)("button", {
-							type: "button",
-							className: AsideSidebar_module_css_default.sectionHead,
-							"aria-expanded": open.has("artifacts"),
-							onClick: () => {
-								toggle("artifacts");
-							},
-							children: [(0, react_jsx_runtime.jsx)("span", { children: t("artifactsTitle") }), (0, react_jsx_runtime.jsx)("span", {
-								className: AsideSidebar_module_css_default.count,
-								children: artifacts.length
-							})]
-						}), open.has("artifacts") && (0, react_jsx_runtime.jsxs)("ul", {
-							className: AsideSidebar_module_css_default.list,
-							children: [artifacts.length === 0 && (0, react_jsx_runtime.jsx)("li", {
-								className: AsideSidebar_module_css_default.empty,
-								children: t("artifactsEmpty")
-							}), artifacts.map((artifact) => (0, react_jsx_runtime.jsx)("li", { children: (0, react_jsx_runtime.jsxs)("button", {
-								type: "button",
-								className: AsideSidebar_module_css_default.artifactEntry,
-								title: artifact.path,
-								onClick: () => {
-									openArtifact(artifact.path);
-								},
-								children: ["📄 ", artifact.name]
-							}) }, artifact.path))]
-						})]
-					}),
-					(0, react_jsx_runtime.jsxs)("section", {
-						className: AsideSidebar_module_css_default.section,
-						children: [(0, react_jsx_runtime.jsxs)("button", {
-							type: "button",
-							className: AsideSidebar_module_css_default.sectionHead,
-							"aria-expanded": open.has("sources"),
-							onClick: () => {
-								toggle("sources");
-							},
-							children: [(0, react_jsx_runtime.jsx)("span", { children: t("sourcesTitle") }), (0, react_jsx_runtime.jsx)("span", {
-								className: AsideSidebar_module_css_default.count,
-								children: sources.length
-							})]
-						}), open.has("sources") && (0, react_jsx_runtime.jsxs)("ul", {
-							className: AsideSidebar_module_css_default.list,
-							children: [sources.length === 0 && (0, react_jsx_runtime.jsx)("li", {
-								className: AsideSidebar_module_css_default.empty,
-								children: t("sourcesEmpty")
-							}), sources.map((source) => (0, react_jsx_runtime.jsx)("li", { children: (0, react_jsx_runtime.jsx)("a", {
-								className: AsideSidebar_module_css_default.sourceEntry,
-								href: source.url,
-								title: source.meta ?? source.url,
-								target: "_blank",
-								rel: "noopener noreferrer",
-								onClick: (event) => {
-									event.preventDefault();
-									openSource(source.url);
-								},
-								children: source.title
-							}) }, source.url))]
-						})]
-					})
-				]
+									children: asideText(record)
+								}), (0, react_jsx_runtime.jsx)("time", {
+									className: AsideSidebar_module_css_default.asideTime,
+									dateTime: new Date(record.updatedAt).toISOString(),
+									title: new Date(record.updatedAt).toLocaleString(),
+									children: t("updatedAt", { time: formatAsideTime(record.updatedAt) })
+								})]
+							}) }, record.subSessionId))
+						]
+					})]
+				})
 			});
 		}
 		//#endregion
@@ -4534,24 +5782,66 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		//#region lib/types/client/AsideAskAction.js
 		/**
 		* The per-message aside entry on the stock `conversation.chat.assistant-actions`
-		* strip: one click opens a draft drawer anchored to that assistant message —
-		* a stock-native entry point that carries the message's exact `messageId`
-		* (the selection watcher cannot see one, because stock renderers publish no
-		* message DOM identity). The message text is resolved from history so the
-		* anchor has a label; clicking an already-asked message reopens its aside.
+		* strip: one click opens a draft drawer anchored to that assistant message.
+		* The action also registers its DOM (turn-tail row + sentinel) with the
+		* {@link MessageDomRegistry} so the sidebar can scroll back to this message.
+		* The message text is resolved from history; clicking an already-asked
+		* message reopens its aside.
 		* @module @ywzhang1031/dsh-client-ui-aside/AsideAskAction
 		*/
-		/** Extract the plain text of a content-block array (same projection as the drawer). */
+		/** Extract the plain text of a content-block array. */
 		function textOf(blocks) {
 			return (Array.isArray(blocks) ? blocks : []).filter((block) => typeof block === "object" && block !== null && block.type === "text").map((block) => block.text ?? "").join("\n").trim();
+		}
+		/**
+		* Build a whole-message anchor against rendered text. The closing answer is
+		* normally the last occurrence because Think may quote it first.
+		*/
+		function messageAnchor(messageId, exact, rendered = "") {
+			const startOffset = rendered.lastIndexOf(exact);
+			if (startOffset === -1) return {
+				messageId,
+				exact,
+				prefix: "",
+				suffix: "",
+				occurrence: null,
+				startOffset: null
+			};
+			let occurrence = 0;
+			let offset = rendered.indexOf(exact);
+			while (offset !== -1 && offset <= startOffset) {
+				occurrence += 1;
+				offset = rendered.indexOf(exact, offset + exact.length);
+			}
+			return {
+				messageId,
+				exact,
+				prefix: rendered.slice(Math.max(0, startOffset - 60), startOffset),
+				suffix: rendered.slice(startOffset + exact.length, startOffset + exact.length + 60),
+				occurrence,
+				startOffset
+			};
 		}
 		/**
 		* One click: resolve the current session, find the message's text in history,
 		* then open a draft (or reopen the existing aside for an already-asked span).
 		*/
-		function AsideAskAction({ messageId, api, sessions, anchors, drawer, t }) {
+		function AsideAskAction({ messageId, api, sessions, repository, drawer, registry, t }) {
 			const [busy, setBusy] = (0, react.useState)(false);
 			const alive = (0, react.useRef)(true);
+			const buttonRef = (0, react.useRef)(null);
+			(0, react.useEffect)(() => {
+				const sentinel = buttonRef.current;
+				if (sentinel === null) return;
+				const turnTail = chatAnchorRow(sentinel) ?? sentinel;
+				return registry.register(String(messageId), {
+					sentinel,
+					turnTail
+				});
+			}, [messageId, registry]);
+			(0, react.useEffect)(() => () => {
+				alive.current = false;
+			}, []);
 			const resolve = (0, react.useCallback)(async () => {
 				const sessionId = sessions.list.getSnapshot().current;
 				if (sessionId === void 0 || sessionId === null || busy) return;
@@ -4573,19 +5863,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 						break;
 					}
 					if (text === "") throw new Error("message not found in history");
-					const existing = anchors.find(sessionId, messageId, text);
+					const entry = registry.get(String(messageId));
+					const row = entry === void 0 ? null : findMessageRowBefore(entry.turnTail, text);
+					const anchor = messageAnchor(String(messageId), text, row?.textContent ?? "");
+					const existing = repository.find(sessionId, anchor);
 					if (existing !== void 0) {
-						drawer.openSub({
-							subSessionId: existing.subSessionId,
-							parentSessionId: existing.sessionId,
-							anchorText: existing.text
-						});
+						drawer.openSub(existing);
 						return;
 					}
 					drawer.openDraft({
 						parentSessionId: sessionId,
-						anchorText: text,
-						messageId
+						anchor
 					});
 				} catch (error) {
 					console.error("[aside] ask action failed:", error);
@@ -4594,11 +5882,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				}
 			}, [
 				alive,
-				anchors,
 				api,
 				busy,
 				drawer,
 				messageId,
+				repository,
 				sessions
 			]);
 			const label = t("askMessageLabel");
@@ -4606,6 +5894,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				label,
 				side: "bottom",
 				children: (0, react_jsx_runtime.jsx)("button", {
+					ref: buttonRef,
 					type: "button",
 					className: AsideAskAction_module_css_default.action,
 					"aria-label": label,
@@ -4618,19 +5907,58 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			});
 		}
 		//#endregion
+		//#region lib/types/client/visibility.js
+		/** Plugin-owned projection that keeps durable aside sessions out of DSH navigation. */
+		/**
+		* Hide confirmed aside records through DSH's public archive projection.
+		* Archiving preserves logs and Workspace accounting; it only removes the
+		* child from grouping, flat-list, and search surfaces.
+		*/
+		var AsideVisibility = class {
+			workspaces;
+			report;
+			hiding = /* @__PURE__ */ new Map();
+			constructor(workspaces, report = (message, error) => {
+				console.warn(message, error);
+			}) {
+				this.workspaces = workspaces;
+				this.report = report;
+			}
+			/** Hide one record idempotently; failures stay retryable on the next reconciliation. */
+			hide(record) {
+				const id = record.subSessionId;
+				if (this.workspaces.list.getSnapshot().archivedSessionIds.includes(id)) return Promise.resolve(true);
+				const active = this.hiding.get(record.subSessionId);
+				if (active !== void 0) return active;
+				const pending = this.workspaces.archiveSession(id).then(() => true).catch((error) => {
+					this.report(`[aside] failed to hide child session "${record.subSessionId}" from Workspace navigation:`, error);
+					return false;
+				}).finally(() => {
+					if (this.hiding.get(record.subSessionId) === pending) this.hiding.delete(record.subSessionId);
+				});
+				this.hiding.set(record.subSessionId, pending);
+				return pending;
+			}
+			/** Reconcile Host-confirmed records; never infer aside identity from parentSession alone. */
+			reconcile(records) {
+				for (const record of records) this.hide(record);
+			}
+		};
+		//#endregion
 		//#region lib/types/client/locales.js
 		/** Copy dictionaries for the aside drawer, sidebar, and floating action. */
 		/** Simplified Chinese dictionary and key source of truth. */
 		const zh = {
 			title: "旁注",
-			readonlyBadge: "只读",
 			readonlyHint: "继承主对话上下文；仅聊天、Shell 分析、文件读取、网页搜索与抓取 — 无法修改任何文件",
 			askLabel: "💬 就此提问",
 			askMessageLabel: "就此消息提问旁注",
 			draftHint: "输入你的问题并发送，才会创建旁注。",
+			sourceLabel: "引用原文",
 			loading: "正在读取对话…",
 			empty: "还没有消息。发送第一条提问开始。",
 			placeholder: "追问这个知识点…",
+			commandPlaceholder: "输入消息，或 / 查看命令",
 			send: "发送",
 			sending: "发送中…",
 			close: "关闭",
@@ -4640,22 +5968,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			sidebarLabel: "旁注侧栏",
 			asidesTitle: "旁注聊天",
 			asidesEmpty: "选中文字提问后，旁注会出现在这里。",
-			artifactsTitle: "产出",
-			artifactsEmpty: "本对话还没有产出文件。",
-			sourcesTitle: "来源",
-			sourcesEmpty: "本对话还没有网页搜索来源。"
+			asidesLoading: "正在读取旁注…",
+			modelLabel: "模型",
+			reasoningLabel: "推理",
+			readOnlyLabel: "只读",
+			generating: "生成中",
+			commandHint: "命令",
+			unknownCommand: "未知命令：{{command}}",
+			commandNotAllowed: "该命令在旁注中不可用：{{command}}",
+			commandError: "命令执行失败：{{message}}",
+			draftNoCommand: "请先发送问题创建旁注，再使用命令。",
+			draftModelCommand: "草稿模型可直接在输入框下方选择。",
+			backToBottom: "回到底部",
+			openAside: "打开旁注",
+			updatedAt: "更新于 {{time}}",
+			defaultReasoning: "默认"
 		};
 		/** English dictionary checked against the Chinese key set. */
 		const en = {
 			title: "Side conversation",
-			readonlyBadge: "Read-only",
 			readonlyHint: "Forked from the main conversation; chat, shell analysis, file reads, and web search/fetch only — files cannot be modified",
 			askLabel: "💬 Ask about this",
 			askMessageLabel: "Ask about this message in an aside",
 			draftHint: "Type a question and send it — only then is the aside created.",
+			sourceLabel: "Quoted text",
 			loading: "Reading the conversation…",
 			empty: "No messages yet. Send the first question to start.",
 			placeholder: "Ask about this topic…",
+			commandPlaceholder: "Type a message, or / for commands",
 			send: "Send",
 			sending: "Sending…",
 			close: "Close",
@@ -4665,27 +6005,41 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			sidebarLabel: "Aside sidebar",
 			asidesTitle: "Aside chats",
 			asidesEmpty: "Asides appear here after you ask about selected text.",
-			artifactsTitle: "Artifacts",
-			artifactsEmpty: "No produced files in this conversation yet.",
-			sourcesTitle: "Sources",
-			sourcesEmpty: "No web-search sources in this conversation yet."
+			asidesLoading: "Reading asides…",
+			modelLabel: "Model",
+			reasoningLabel: "Reasoning",
+			readOnlyLabel: "Read-only",
+			generating: "Generating",
+			commandHint: "Commands",
+			unknownCommand: "Unknown command: {{command}}",
+			commandNotAllowed: "This command is not available in an aside: {{command}}",
+			commandError: "Command failed: {{message}}",
+			draftNoCommand: "Send a question first to create the aside, then use commands.",
+			draftModelCommand: "Choose the draft model directly below the composer.",
+			backToBottom: "Back to bottom",
+			openAside: "Open aside",
+			updatedAt: "Updated {{time}}",
+			defaultReasoning: "Default"
 		};
 		//#endregion
 		//#region lib/types/client/index.js
 		/**
-		* Aside UI plugin, browser half: the frame-wide side-conversation drawer,
-		* the standing Codex-style sidebar (artifacts, sources, aside chats), the
-		* prose-selection watcher with its floating ask button, the per-message
-		* aside action on the stock `conversation.chat.assistant-actions` strip,
-		* and the anchor ledger. A selection is a DRAFT: nothing durable exists
-		* until the first question is actually sent — the durable authority (the
-		* aside session, its fork lineage, its read-only posture) lives in the Host.
+		* Aside UI plugin, browser half: the frame-wide side-conversation drawer, the
+		* standing aside sidebar, the prose-selection watcher with its floating ask
+		* button, the per-message aside action on the stock
+		* `conversation.chat.assistant-actions` strip, and the exact-text highlight
+		* layer. A selection is a DRAFT: nothing durable exists until the first
+		* question is actually sent — the durable authority (the aside session, its
+		* fork lineage, its read-only posture, and the anchor relationship) lives in
+		* the Host. The browser only mirrors the Host's `aside.list`/`aside.create`
+		* results; there is no `localStorage`.
 		*
 		* Stock-only wiring: the plugin self-mounts its generated Typert Remote stub
 		* through `ctx.remote.$mount` (the same API `dsh-api-remotes` uses for the
 		* shipped remotes), so no host composition change is needed; session
-		* attribution comes from the runtime sessions service instead of DOM
-		* attributes, which stock renderers do not publish.
+		* attribution comes from the runtime sessions service plus history matching
+		* (stock renders the assistant-actions strip in a sibling node of the message
+		* text, so the selection cannot be attributed by sentinel containment).
 		* @module @ywzhang1031/dsh-client-ui-aside/client
 		*/
 		/** Dictionary namespace owned by this plugin. */
@@ -4694,12 +6048,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		const inject = [
 			"slots",
 			"sessions",
+			"workspaces",
 			"connection",
 			"remote",
-			"locale"
+			"locale",
+			"conversation"
 		];
-		/** Stylesheet for the DOM-created floating ask button (theme tokens with fallbacks). */
-		const FLOATING_BUTTON_CSS = `
+		/** Stylesheet for the DOM-created floating ask button and highlight layer. */
+		const PLUGIN_CSS = `
 .aside-ask-button {
   position: fixed;
   z-index: 70;
@@ -4716,17 +6072,42 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 }
 .aside-ask-button:hover { background: var(--dsw-alias-state-business-weak, #f2f6ff); }
 .aside-ask-button:disabled { opacity: 0.85; cursor: wait; }
+::highlight(${HIGHLIGHT_NAME}) {
+  background-color: color-mix(in srgb, var(--dsw-alias-state-business-primary, #1a6bff) 16%, transparent);
+}
+::highlight(${ACTIVE_HIGHLIGHT_NAME}) {
+  background-color: color-mix(in srgb, var(--dsw-alias-state-business-primary, #1a6bff) 38%, transparent);
+  text-decoration: underline 2px var(--dsw-alias-state-business-primary, #1a6bff);
+}
+.aside-message-anchored {
+  box-shadow: inset 2px 0 0 0 var(--dsw-alias-state-business-primary, #1a6bff);
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #1a6bff) 5%, transparent);
+}
+.aside-message-flash {
+  animation: aside-message-flash 1.6s ease-out;
+}
+@keyframes aside-message-flash {
+  0% { background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #1a6bff) 24%, transparent); }
+  100% { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aside-message-flash { animation: none; }
+}
 `;
 		/** The rendering session id, from the runtime service (stock DOM carries no attribute). */
 		function currentSession(sessions) {
 			return sessions.list.getSnapshot().current ?? null;
 		}
+		const FLASH_CLASS = "aside-message-flash";
+		const ANCHORED_CLASS = "aside-message-anchored";
+		/** Bound old-history pulls for one click; unchanged history stops earlier. */
+		const MAX_LOCATE_PAGES = 20;
 		/**
-		* Client plugin body: one shared anchor ledger and drawer store, the
-		* self-mounted Remote stub, the per-message aside action, the overlay drawer
-		* and sidebar, and the selection watcher. Selections open a draft; the first
-		* send turns it into a real aside (create → anchor → prompt) through
-		* {@link sendFirst}.
+		* Client plugin body: one shared repository, drawer store, message DOM
+		* registry, and highlight layer, the self-mounted Remote stub, the
+		* per-message aside action, the overlay drawer and sidebar, and the selection
+		* watcher. Selections open a draft; the first send turns it into a real aside
+		* (create → prompt) through {@link sendFirst}.
 		* @param ctx - the browser root context.
 		*/
 		async function apply(ctx) {
@@ -4735,58 +6116,156 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				zh,
 				en
 			}), "ui-aside: dictionaries");
-			const anchors = new AnchorStore();
-			const drawer = new DrawerStore();
 			const { api } = ctx.get("connection");
 			const sessions = ctx.sessions;
 			const asideDisposer = await ctx.remote.$mount(TYPERT_REMOTE);
 			ctx.effect(() => asideDisposer, "ui-aside: remote stub unmount");
 			const aside = ctx.get("remote.aside");
 			if (aside === void 0) throw new Error("ui-aside: mounted Remote namespace \"aside\" is unavailable");
-			/** Reopen one existing aside from the sidebar or an anchor click. */
-			const openExisting = (anchor) => {
-				drawer.openSub({
-					subSessionId: anchor.subSessionId,
-					parentSessionId: anchor.sessionId,
-					anchorText: anchor.text
-				});
+			const repository = new AsideRepository(aside);
+			const drawer = new DrawerStore();
+			const visibility = new AsideVisibility(ctx.workspaces);
+			const registry = new MessageDomRegistry();
+			const highlighter = new AsideHighlighter(document);
+			const rafFn = typeof requestAnimationFrame === "function" ? (cb) => requestAnimationFrame(cb) : (cb) => setTimeout(cb, 16);
+			const cancelRaf = typeof cancelAnimationFrame === "function" ? (id) => {
+				cancelAnimationFrame(id);
+			} : (id) => {
+				clearTimeout(id);
 			};
+			let locateGeneration = 0;
+			/** Let the drawer and a newly prepended history page commit before locating. */
+			const settleLayout = () => new Promise((resolve) => {
+				rafFn(() => {
+					rafFn(() => {
+						resolve();
+					});
+				});
+			});
+			/** The first mounted chat row, used to detect that loadOlder made no progress. */
+			const historyHeadKey = () => document.querySelector("[data-conversation-scroll] [data-chat-anchor-key]")?.dataset.chatAnchorKey ?? null;
+			/** Briefly emphasize one message row (then let the persistent highlight return). */
+			const flashMessage = (el) => {
+				el.classList.add(FLASH_CLASS);
+				setTimeout(() => {
+					el.classList.remove(FLASH_CLASS);
+				}, 1600);
+			};
+			/** Scroll to one exact anchored span, degrading to its parent message. */
+			const locateMessage = (record) => {
+				if (highlighter.focus(record.subSessionId)) return true;
+				const messageId = record.anchor.messageId;
+				let turnTail = null;
+				if (messageId !== null) {
+					const entry = registry.get(messageId);
+					if (entry !== void 0) {
+						turnTail = entry.turnTail;
+						const messageRow = findMessageRowBefore(entry.turnTail, record.anchor.exact);
+						const range = messageRow === null ? null : restoreAnchorRange(messageRow, record.anchor);
+						if (range !== null) {
+							highlighter.add(record.subSessionId, range);
+							if (highlighter.focus(record.subSessionId)) return true;
+						}
+					}
+				}
+				const row = findRowContaining(document, record.anchor.exact);
+				if (row !== null) {
+					const range = restoreAnchorRange(row, record.anchor);
+					if (range !== null) {
+						highlighter.add(record.subSessionId, range);
+						if (highlighter.focus(record.subSessionId)) return true;
+					}
+					row.scrollIntoView({ block: "center" });
+					flashMessage(row);
+					return true;
+				}
+				if (turnTail !== null) {
+					turnTail.scrollIntoView({ block: "center" });
+					flashMessage(turnTail);
+					return true;
+				}
+				return false;
+			};
+			/** Reopen one existing aside from the sidebar or an anchor click. */
+			const openExisting = (record) => {
+				const generation = ++locateGeneration;
+				drawer.openSub(record);
+				(async () => {
+					await settleLayout();
+					if (generation !== locateGeneration || currentSession(sessions) !== record.parentSessionId) return;
+					if (locateMessage(record)) return;
+					const conversation = ctx.sessions.scope(record.parentSessionId)?.get("conversation");
+					if (conversation === void 0) return;
+					let head = historyHeadKey();
+					for (let page = 0; page < MAX_LOCATE_PAGES; page += 1) {
+						try {
+							await conversation.loadOlder();
+						} catch {
+							return;
+						}
+						await settleLayout();
+						if (generation !== locateGeneration || currentSession(sessions) !== record.parentSessionId) return;
+						if (locateMessage(record)) return;
+						const nextHead = historyHeadKey();
+						if (nextHead === head) return;
+						head = nextHead;
+					}
+				})();
+			};
+			let selectedSessionId = currentSession(sessions);
+			const offSessionChange = sessions.list.subscribe(() => {
+				const nextSessionId = currentSession(sessions);
+				if (nextSessionId === selectedSessionId) return;
+				selectedSessionId = nextSessionId;
+				locateGeneration += 1;
+				drawer.close();
+			});
+			ctx.effect(() => offSessionChange, "ui-aside: close drawer on session change");
 			/**
-			* The draft's first send: create the forked aside, record the anchor (only
-			* now is the prose actually asked about), prompt it with the anchored
-			* source attached, and bind the drawer. A failure keeps the draft open
-			* with the error surfaced.
+			* The draft's first send: create the forked aside (the Host persists the
+			* anchor into the child's first message), hide its navigation row, prompt
+			* it with the question, and
+			* bind the drawer. A failure keeps the draft open with the error surfaced;
+			* no local anchor is fabricated. If the drawer was closed/reopened mid-flight
+			* the created aside still exists (correctly anchored), but it is never bound
+			* to the now-different draft.
 			*/
-			const sendFirst = async (input) => {
+			const sendFirst = async (input, model) => {
 				const draft = drawer.get();
-				if (draft.subSessionId !== null || !draft.draft) return false;
+				if (draft.subSessionId !== null || !draft.draft || draft.anchor === null || draft.parentSessionId === null) return false;
 				const parentSessionId = draft.parentSessionId;
-				const messageId = draft.messageId;
-				if (parentSessionId === null) return false;
+				const anchor = draft.anchor;
+				const version = drawer.getVersion();
 				try {
-					const created = await aside.create({ parentSessionId });
+					const created = await aside.create({
+						parentSessionId,
+						anchor
+					});
 					if (!created.ok) throw new Error(created.error.message);
-					const result = created.value;
-					const question = openingQuestion(input, anchors.ensure({
-						sessionId: parentSessionId,
-						...messageId === null ? {} : { messageId },
-						text: draft.anchorText,
-						subSessionId: result.sessionId
-					}).text);
+					const record = created.value.record;
+					await visibility.hide(record);
+					if (model !== void 0) {
+						const selected = await api.sessions.selectModel({
+							sessionId: record.subSessionId,
+							...model
+						});
+						if (!selected.result.ok) throw new Error(selected.result.error.message);
+					}
 					const sent = await api.sessions.prompt({
-						sessionId: result.sessionId,
+						sessionId: record.subSessionId,
 						mode: "queue",
 						content: [{
 							type: "text",
-							text: question
+							text: input.trim()
 						}]
 					});
 					if (!sent.result.ok) throw new Error(sent.result.error.message);
-					drawer.attach(result.sessionId);
+					repository.add(record);
+					drawer.attach(record, version);
 					return true;
 				} catch (error) {
 					console.error("[aside] first send failed:", error);
-					drawer.setError(error instanceof Error ? error.message : String(error));
+					if (drawer.getVersion() === version) drawer.setError(error instanceof Error ? error.message : String(error));
 					return false;
 				}
 			};
@@ -4800,9 +6279,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					id: "aside-sidebar",
 					order: 10,
 					inject: () => ({
-						anchors,
+						repository,
+						drawer,
 						sessions: sidebarSessions,
-						api,
 						onOpenAside: openExisting,
 						t
 					})
@@ -4827,55 +6306,131 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					inject: () => ({
 						api,
 						sessions,
-						anchors,
+						repository,
 						drawer,
+						registry,
 						t
 					})
 				}, AsideAskAction);
 			});
 			const style = document.createElement("style");
-			style.textContent = FLOATING_BUTTON_CSS;
+			style.textContent = PLUGIN_CSS;
 			document.head.appendChild(style);
 			ctx.effect(() => () => {
 				style.remove();
-			}, "ui-aside: floating button style");
+			}, "ui-aside: plugin stylesheet");
+			/** Rebuild the exact highlights from the current session's records. */
+			const syncHighlights = () => {
+				highlighter.clear();
+				for (const el of [...document.querySelectorAll(`.${ANCHORED_CLASS}`)]) el.classList.remove(ANCHORED_CLASS);
+				for (const record of repository.list()) {
+					const entry = record.anchor.messageId === null ? void 0 : registry.get(record.anchor.messageId);
+					const row = (entry === void 0 ? null : findMessageRowBefore(entry.turnTail, record.anchor.exact)) ?? findRowContaining(document, record.anchor.exact) ?? entry?.turnTail;
+					if (row === null || row === void 0) continue;
+					const range = restoreAnchorRange(row, record.anchor);
+					if (!(range !== null && highlighter.add(record.subSessionId, range))) row.classList.add(ANCHORED_CLASS);
+				}
+			};
+			let raf = 0;
+			const scheduleSync = () => {
+				if (raf !== 0) return;
+				raf = rafFn(() => {
+					raf = 0;
+					syncHighlights();
+				});
+			};
+			const reconcileVisibility = () => {
+				visibility.reconcile(repository.list());
+			};
+			const offRepo = repository.subscribe(() => {
+				scheduleSync();
+				reconcileVisibility();
+			});
+			const offWorkspaces = ctx.workspaces.list.subscribe(reconcileVisibility);
+			const observer = new MutationObserver(scheduleSync);
+			observer.observe(document.body, {
+				childList: true,
+				subtree: true
+			});
+			ctx.effect(() => () => {
+				offRepo();
+				offWorkspaces();
+				observer.disconnect();
+				if (raf !== 0) cancelRaf(raf);
+			}, "ui-aside: highlight sync");
+			const onClick = (event) => {
+				const selection = document.getSelection();
+				if (selection !== null && !selection.isCollapsed) return;
+				const subSessionId = highlighter.hitTest(event.clientX, event.clientY);
+				if (subSessionId === null) return;
+				const record = repository.findSub(subSessionId);
+				if (record === void 0) return;
+				event.preventDefault();
+				event.stopPropagation();
+				openExisting(record);
+			};
+			document.addEventListener("click", onClick, true);
+			ctx.effect(() => () => {
+				document.removeEventListener("click", onClick, true);
+			}, "ui-aside: highlight click");
 			/** A selection opens a draft drawer; nothing is created until asked. */
-			const ask = (selection) => {
-				const existing = anchors.find(selection.sessionId, selection.messageId ?? void 0, selection.text);
-				if (existing !== void 0) {
-					drawer.openSub({
-						subSessionId: existing.subSessionId,
-						parentSessionId: existing.sessionId,
-						anchorText: existing.text
+			const ask = async (selection) => {
+				let messageId = null;
+				try {
+					const history = await api.sessions.history({
+						sessionId: selection.sessionId,
+						maxMessages: 100
 					});
+					if (history.result.ok) messageId = resolveMessageId(history.result.value.events, selection.anchor.exact);
+				} catch {}
+				const anchor = {
+					...selection.anchor,
+					messageId
+				};
+				const existing = repository.find(selection.sessionId, anchor);
+				if (existing !== void 0) {
+					openExisting(existing);
 					return;
 				}
 				drawer.openDraft({
 					parentSessionId: selection.sessionId,
-					anchorText: selection.text,
-					messageId: selection.messageId
+					anchor
 				});
 			};
 			const watcher = new SelectionWatcher(document, ask, t("askLabel"), () => currentSession(sessions));
 			ctx.effect(() => watcher.start(), "ui-aside: selection watcher");
+			scheduleSync();
 		}
 		//#endregion
-		exports.AnchorStore = AnchorStore;
+		exports.ACTIVE_HIGHLIGHT_NAME = ACTIVE_HIGHLIGHT_NAME;
+		exports.ASIDE_COMMANDS = ASIDE_COMMANDS;
 		exports.AsideAskAction = AsideAskAction;
 		exports.AsideDrawer = AsideDrawer;
+		exports.AsideHighlighter = AsideHighlighter;
+		exports.AsideRepository = AsideRepository;
 		exports.AsideSidebar = AsideSidebar;
+		exports.AsideVisibility = AsideVisibility;
 		exports.DrawerStore = DrawerStore;
+		exports.HIGHLIGHT_NAME = HIGHLIGHT_NAME;
 		exports.MAX_SELECTION_CHARS = MAX_SELECTION_CHARS;
 		exports.MIN_SELECTION_CHARS = MIN_SELECTION_CHARS;
+		exports.MessageDomRegistry = MessageDomRegistry;
 		exports.NS = NS;
 		exports.SelectionWatcher = SelectionWatcher;
 		exports.apply = apply;
-		exports.foldArtifacts = foldArtifacts;
-		exports.foldSources = foldSources;
+		exports.asideText = asideText;
+		exports.buildQuote = buildQuote;
+		exports.chatAnchorRow = chatAnchorRow;
+		exports.findMessageRowBefore = findMessageRowBefore;
+		exports.findRowContaining = findRowContaining;
 		exports.inject = inject;
-		exports.openingQuestion = openingQuestion;
+		exports.normalizeText = normalizeText;
 		exports.projectHistory = projectHistory;
+		exports.resolveMessageId = resolveMessageId;
 		exports.resolveSelection = resolveSelection;
+		exports.restoreAnchorRange = restoreAnchorRange;
+		exports.restoreRange = restoreRange;
+		exports.supportsCustomHighlight = supportsCustomHighlight;
 		return module.exports;
 	}
 });

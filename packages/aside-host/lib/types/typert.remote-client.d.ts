@@ -1,12 +1,14 @@
-/** Browser Remote contribution for the Aside endpoint. @module @ywzhang1031/dsh-aside-host/remote */
+/** Browser Remote contribution for the Aside endpoints. @module @ywzhang1031/dsh-aside-host/remote */
 import type { RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol';
-import type { AsideCreateRequest, AsideCreateResult } from './types.ts';
+import type { AsideCreateRequest, AsideCreateResult, AsideListRequest, AsideListResult } from './types.ts';
 declare module '@deepseek-ai/dsh-typert-protocol' {
     interface TypertRemoteNamespace$6173696465 {
         create: (request: AsideCreateRequest) => Promise<RemoteResult<AsideCreateResult>>;
+        list: (request: AsideListRequest) => Promise<RemoteResult<AsideListResult>>;
     }
     interface TypertRemoteMap {
         'aside/create': (request: AsideCreateRequest) => Promise<RemoteResult<AsideCreateResult>>;
+        'aside/list': (request: AsideListRequest) => Promise<RemoteResult<AsideListResult>>;
     }
     interface TypertRemoteNamespaceMap {
         aside: TypertRemoteNamespace$6173696465;

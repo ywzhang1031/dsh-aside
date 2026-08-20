@@ -2,29 +2,34 @@
 
 English | [中文](README.zh.md)
 
-Browser surface for read-only side conversations ("旁注"). Select prose in a settled assistant reply, click the floating **就此提问** button (or the per-message 💬 action on the message's action strip), and an EMPTY draft drawer opens bound to that selection — nothing durable exists yet. Type a question and send it: only then is the forked aside created and the anchored source attached to the question. Closing an unanswered draft leaves nothing behind.
+Browser surface for read-only side conversations ("旁注"). Select prose in a settled assistant reply, click the floating **就此提问** button (or the per-message 💬 action), and a draft with a quote card plus the stable composer opens bound to that selection — nothing durable exists yet. It previews the parent's model/reasoning and permits a local choice without mutating the parent. On send, the Host creates the forked aside and crosses the anchor durability barrier; the client applies that choice to the child, then sends the first question. Closing an unanswered draft leaves nothing behind.
 
-Runs on a **stock DSH deployment with no source modifications**: the plugin self-mounts its generated Remote stub through `ctx.remote.$mount`, reads the current session from the runtime sessions service (stock renderers publish no DOM identity attributes), and contributes its per-message entry to the stock `conversation.chat.assistant-actions` strip — the same extension point `ui-message-feedback` uses.
+Runs on a **stock DSH deployment with no source modifications**: the plugin self-mounts its generated Remote stub through `ctx.remote.$mount`, reads the current session from the runtime sessions service, and contributes its per-message entry to the stock `conversation.chat.assistant-actions` strip.
 
-The plugin owns five pieces, all client-side presentation state:
+The plugin owns these pieces:
 
-- **`AnchorStore`** — the asked-about-span → aside mapping, persisted in `localStorage`; idempotent per (session, message?, text).
+- **`AsideRepository`** — the Host-backed cache over `aside.list`/`aside.create`. The Host is the source of truth; this is an in-memory mirror only (no `localStorage`, no second local fact).
 - **`DrawerStore`** — the open-drawer state machine: a draft (selection bound, no session) attaches to a real aside only when the first send succeeds.
-- **`SelectionWatcher`** — a document-level listener that resolves a selection to the CURRENT session (via the runtime sessions service) and floats the ask button.
-- **`AsideDrawer`** — the overlay-slot panel: reads history by light polling through the connection API, sends through `sessions.prompt`, and renders assistant prose through the shared markdown renderer.
-- **`AsideSidebar`** — the standing Codex-style rail: produced files, web-search sources, and the current conversation's aside chats, folded from the session history; aside entries reopen their side conversation in the drawer.
-- **`AsideAskAction`** — the per-message entry on the stock assistant-actions strip: carries the message's exact `messageId` (invisible to the DOM watcher), resolves the message text from history, and opens the same draft drawer.
+- **`SelectionWatcher`** — a document-level listener that resolves a selection into a quote-selector anchor and floats the ask button.
+- **`MessageDomRegistry`** — maps a stock `messageId` to its turn-tail row as the virtualization/fallback target when exact prose cannot be restored.
+- **`AsideHighlighter`** + **`quote`** — restore each aside's exact Range (TreeWalker + quote selector), paint it with the CSS Custom Highlight API, and center/strengthen that exact span on sidebar navigation; clicking the highlight reopens its aside.
+- **`AsideVisibility`** — hides confirmed aside children through the public Workspace archive projection while preserving logs and Workspace accounting, coalescing concurrent hide requests.
+- **`AsideDrawer`** — the overlay-slot panel whose draft and durable states share one bottom model/reasoning, fixed read-only, command, and send toolbar, plus visibility-aware adaptive polling and autoscroll.
+- **`AsideSidebar`** — the standing rail listing only the current conversation's aside chats (no artifacts, no sources), including current-open state and update time.
+- **`AsideAskAction`** — the per-message entry that carries the message's exact `messageId`, resolves its text from history, and opens the same draft drawer.
 
-The durable authority — the aside session, its fork lineage, its read-only posture — lives in the Host (`@ywzhang1031/dsh-aside-host`); clearing browser storage hides the anchor list but never deletes the asides.
+The durable authority — the aside session, its fork lineage, its read-only posture, and the anchor relationship — lives in the Host (`@ywzhang1031/dsh-aside-host`).
 
 ## Stock-only trade-offs
 
-- **No inline prose highlight.** Stock `MarkdownText` has no decoration hook, so the asked-about text cannot be highlighted inside the parent message. Re-entry instead goes through the per-message 💬 action, the sidebar's **Aside chats** section, and the session list.
-- **Session-level selection attribution.** The floating button attributes a selection to the current session only (no `messageId`); the per-message action provides message-precise anchoring.
+- **No per-message DOM identity is published.** Stock renders the assistant-actions strip in a sibling node of the message text, so selection attribution uses history matching; the per-message action provides message-precise anchoring.
+- **Message positioning uses `data-chat-anchor-key`** as a best-effort local DOM hint, with the action node as fallback — never a CSS class name as the sole authority.
+- **Exact highlight degrades gracefully** when the rendered span cannot be recovered or the browser lacks the CSS Custom Highlight API (message-level marking, then the sidebar/action path).
+- **Asides stay inside their parent navigation hierarchy.** Durable children are hidden from grouped, flat, and search navigation through `workspace.archiveSession`; existing records reconcile when the parent loads.
 
 ## Model Experience
 
-None, as this browser-side surface registers no model tool, prompt section, or provider route; the composed read-only world owns every model request the aside makes.
+None directly, as this browser-side surface registers no model tool, prompt section, or provider route. A draft reads the parent's `session.models` without mutating it; first-send and later switches submit `session.selectModel` only for the aside child, while messages and whitelisted slash commands use `session.prompt`. The composed read-only world owns every model request the aside makes.
 
 #### KV Cache effect
 
@@ -32,7 +37,6 @@ None; this package never assembles model input.
 
 ## Known Limitations and Deferred Work
 
-- **Anchors are browser-local** — the `localStorage` ledger is presentation state; a cleared store hides the aside list, while the side conversations stay reachable from the session list.
-- **Polled history** — the drawer and sidebar refresh by light polling while open rather than subscribing to the live mux stream; streaming fidelity is deferred.
-- **Selection is assistant-message-scoped by surface** — the floating button appears for selections inside the conversation surface; the per-message action is the message-precise entry.
-- **Sidebar artifact paths are raw** — files produced indirectly by terminal commands carry no mutation location and stay out of the artifacts fold, mirroring the deliverables vocabulary.
+- **Adaptive polling, not a live subscription** — the drawer polls the child history at 700ms while generating and backs off to 2.5s when idle (stopping when hidden/closed and refreshing immediately when visible again).
+- **Exact highlight is best-effort** — Markdown source vs. rendered text, repeated spans, and browsers without the Custom Highlight API degrade to message-level marking.
+- **The aside index is recovered from the child's first message** — a custom durable event type is unavailable on stock 0.1.0-rc.7 (no `ignorable` append for out-of-repo plugins).

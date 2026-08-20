@@ -23,8 +23,18 @@
  * - **Approval** — `approval/policy: never` is seeded beside it, so even the
  *   sandbox escalation channel resolves deterministically to `rejected`.
  *
- * Both seeds ride the session log, so they survive restart by replay — the
- * same delegation pattern the subagent driver uses.
+ * Both seeds ride the session log, so they survive restart by replay.
+ *
+ * ## Persistence of the aside relationship
+ *
+ * The parent link is the child session's durable `parentSession` header. The
+ * full anchor (messageId, exact prose, prefix/suffix disambiguation, offsets)
+ * is encoded into the child's first user message by {@link encodeAnchor} and
+ * therefore lives in the durable child log. {@link AsideGateway.list} recovers
+ * every aside for a parent by listing persisted session headers, filtering on
+ * `parentSession`, and reading each child's first message — no localStorage,
+ * no DSH source patch, no custom session event type (see the module note in
+ * types.ts for why a custom event is not load-survivable on stock 0.1.0-rc.7).
  *
  * The gateway composes everything itself: it needs no agent-preset roster
  * and no deployment configuration, so it runs on a stock DSH deployment with
@@ -34,8 +44,8 @@
 import type { Context } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import { type SessionEvent } from '@deepseek-ai/dsh-session';
-import type { AsideCreateRequest, AsideCreateResult } from './types.ts';
-export type * from './types.ts';
+import { type AsideCreateRequest, type AsideCreateResult, type AsideListRequest, type AsideListResult } from './types.ts';
+export * from './types.ts';
 /** Expected failures, classified so a client can degrade gracefully. */
 export declare class AsideError extends Error {
     readonly code: 'parent-not-found';
@@ -78,15 +88,41 @@ export interface AsideGatewayConfig {
 export declare class AsideGateway extends TypertRemoteService {
     static inject: string[];
     private readonly compose;
+    /** One in-flight create per durable parent + full-anchor identity. */
+    private readonly creations;
     constructor(ctx: Context, config?: AsideGatewayConfig);
     /**
      * Create one read-only side conversation under a parent session, forked
-     * from the parent's completed-turn history.
-     * @param request - the parent conversation identity.
-     * @returns the new session id.
+     * from the parent's completed-turn history, and return its durable record.
+     * @param request - the parent conversation identity plus the anchor.
+     * @returns the full durable record.
      * @throws {@link AsideError} when the parent is unknown.
      */
     create(request: AsideCreateRequest): Promise<AsideCreateResult>;
+    /** Create or durably recover the single child for one parent + anchor. */
+    private createRecord;
+    /**
+     * List every aside hanging off one parent conversation, recovered from
+     * durable storage (or, without persistence, the live agent registry).
+     * @param request - the parent conversation identity.
+     * @returns records sorted by updatedAt descending.
+     */
+    list(request: AsideListRequest): Promise<AsideListResult>;
+    /** Recover one child's record from its durable header + first message. */
+    private recordFromChild;
+    /**
+     * Fold one child's OWN events into a record, or undefined when it carries
+     * no anchor. Only the child's own events (at or past `seedLength`) are
+     * considered — a nested aside inherits its parent's log (which may itself
+     * contain an ancestor's anchor marker), and a user's own text may contain a
+     * marker-like string. The anchor is therefore read from the FIRST own user
+     * message, never from inherited history or later user text.
+     */
+    private recordFromEvents;
+    /** Fallback listing from the live agent registry (process-local, no persistence). */
+    private recordsFromLiveAgents;
+    /** Idempotency lookup: an existing aside for the exact same anchor, if any. */
+    private findExisting;
     /** Read one cold session's stored header through the optional persistence backend. */
     private coldHeader;
 }
