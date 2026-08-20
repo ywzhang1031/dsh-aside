@@ -3630,16 +3630,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return /* @__PURE__ */ _superRefine(fn, params);
 		}
 		//#endregion
+		//#region ../aside-host/lib/typert-contract.js
+		/**
+		* Package-owned Remote descriptor shared by the Host registry contribution
+		* and the browser Remote stub.
+		* @module @ywzhang1031/dsh-aside-host/typert-contract
+		*/
+		const ASIDE_PACKAGE = "@ywzhang1031/dsh-aside-host";
+		//#endregion
 		//#region ../aside-host/lib/typert.remote-client.js
-		const _deepseek_ai_dsh_aside_host_aside_create_parameter_0$schema = object({ "parentSessionId": string() });
-		const _deepseek_ai_dsh_aside_host_aside_create_result$schema = object({
-			"sessionId": string(),
-			"agentPreset": string()
-		});
+		/** Browser Remote contribution for the Aside endpoint. @module @ywzhang1031/dsh-aside-host/remote */
 		const TYPERT_REMOTE = {
-			package: "@deepseek-ai/dsh-aside-host",
+			package: ASIDE_PACKAGE,
 			descriptors: [{
-				id: "@deepseek-ai/dsh-aside-host#aside/create",
+				id: `${ASIDE_PACKAGE}#aside/create`,
 				service: "aside",
 				namespace: "aside",
 				method: "create",
@@ -3650,19 +3654,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 					source: "json",
 					codec: {
 						mode: "strict",
-						typeSymbol: "@deepseek-ai/dsh-aside-host/types#AsideCreateRequest",
-						schema: _deepseek_ai_dsh_aside_host_aside_create_parameter_0$schema
+						typeSymbol: `${ASIDE_PACKAGE}/types#AsideCreateRequest`,
+						schema: object({ parentSessionId: string() })
 					}
 				}],
 				result: {
 					mode: "strict",
-					typeSymbol: "@deepseek-ai/dsh-aside-host/types#AsideCreateResult",
-					schema: _deepseek_ai_dsh_aside_host_aside_create_result$schema
-				},
-				sourceLocation: {
-					"file": "packages/aside/aside-host/src/index.ts",
-					"line": 96,
-					"column": 9
+					typeSymbol: `${ASIDE_PACKAGE}/types#AsideCreateResult`,
+					schema: object({ sessionId: string() })
 				}
 			}]
 		};
@@ -3675,7 +3674,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* authority (parent lineage, aside lineage) lives in the session logs; a
 		* lost anchor store degrades to anchors that simply no longer list, while
 		* the side conversations stay reachable from the session list.
-		* @module @deepseek-ai/dsh-client-ui-aside/anchors
+		* @module @ywzhang1031/dsh-client-ui-aside/anchors
 		*/
 		const STORAGE_KEY = "dsh-aside-anchors";
 		/** Read the persisted record list, degrading to empty on any corruption. */
@@ -3760,7 +3759,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		};
 		function defaultStorage() {
 			try {
-				return typeof localStorage === "undefined" ? void 0 : localStorage;
+				return typeof window === "undefined" ? void 0 : window.localStorage;
 			} catch {
 				return;
 			}
@@ -3772,7 +3771,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* pending draft that only becomes a real aside once the user actually sends
 		* a question. A closed unanswered draft leaves nothing behind — no session,
 		* no anchor, no highlight.
-		* @module @deepseek-ai/dsh-client-ui-aside/drawer-store
+		* @module @ywzhang1031/dsh-client-ui-aside/drawer-store
 		*/
 		const CLOSED = {
 			subSessionId: null,
@@ -3870,7 +3869,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* left to the per-message aside action on the assistant-actions strip, which
 		* receives the stock `messageId`. The watcher stays outside the React tree
 		* entirely.
-		* @module @deepseek-ai/dsh-client-ui-aside/selection
+		* @module @ywzhang1031/dsh-client-ui-aside/selection
 		*/
 		/** Selection bounds: reject empty, whole-message, or giant selections. */
 		const MIN_SELECTION_CHARS = 2;
@@ -4010,25 +4009,25 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var AsideDrawer_module_css_default = {
-			"titleRow": "seqwXG_titleRow",
-			"input": "seqwXG_input",
-			"readonlyBadge": "seqwXG_readonlyBadge",
-			"messages": "seqwXG_messages",
-			"row": "seqwXG_row",
 			"close": "seqwXG_close",
-			"hint": "seqwXG_hint",
+			"composer": "seqwXG_composer",
+			"drawer": "seqwXG_drawer",
 			"error": "seqwXG_error",
+			"header": "seqwXG_header",
+			"hint": "seqwXG_hint",
+			"input": "seqwXG_input",
+			"messages": "seqwXG_messages",
+			"prefillHint": "seqwXG_prefillHint",
+			"readonlyBadge": "seqwXG_readonlyBadge",
+			"role": "seqwXG_role",
+			"row": "seqwXG_row",
+			"send": "seqwXG_send",
 			"status": "seqwXG_status",
 			"summaryStatus": "seqwXG_summaryStatus",
-			"drawer": "seqwXG_drawer",
-			"role": "seqwXG_role",
-			"prefillHint": "seqwXG_prefillHint",
-			"toolRow": "seqwXG_toolRow",
-			"header": "seqwXG_header",
 			"title": "seqwXG_title",
-			"composer": "seqwXG_composer",
-			"userText": "seqwXG_userText",
-			"send": "seqwXG_send"
+			"titleRow": "seqwXG_titleRow",
+			"toolRow": "seqwXG_toolRow",
+			"userText": "seqwXG_userText"
 		};
 		//#endregion
 		//#region lib/types/client/AsideDrawer.js
@@ -4039,7 +4038,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* question with the anchored source attached, and only then does the
 		* selection become a highlightable anchor. Closing an unanswered draft
 		* leaves nothing behind. Existing asides reopen for follow-up questions.
-		* @module @deepseek-ai/dsh-client-ui-aside/AsideDrawer
+		* @module @ywzhang1031/dsh-client-ui-aside/AsideDrawer
 		*/
 		/**
 		* Project raw history events into display rows: user/assistant surface
@@ -4264,7 +4263,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* durable facts the tool cards present, folded across the whole conversation
 		* instead of one turn. Pure functions; the sidebar component supplies the
 		* history entries and the refresh cadence.
-		* @module @deepseek-ai/dsh-client-ui-aside/fold
+		* @module @ywzhang1031/dsh-client-ui-aside/fold
 		*/
 		/** Whether a tool/result payload is a mutation (write/edit) outcome. */
 		function isMutationMeta(meta) {
@@ -4345,14 +4344,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			document.head.appendChild(tag);
 		}
 		var AsideSidebar_module_css_default = {
-			"list": "P7Ci5G_list",
-			"section": "P7Ci5G_section",
-			"empty": "P7Ci5G_empty",
-			"asideEntry": "P7Ci5G_asideEntry",
-			"sectionHead": "P7Ci5G_sectionHead",
 			"artifactEntry": "P7Ci5G_artifactEntry",
+			"asideEntry": "P7Ci5G_asideEntry",
 			"asideText": "P7Ci5G_asideText",
 			"count": "P7Ci5G_count",
+			"empty": "P7Ci5G_empty",
+			"list": "P7Ci5G_list",
+			"section": "P7Ci5G_section",
+			"sectionHead": "P7Ci5G_sectionHead",
 			"sidebar": "P7Ci5G_sidebar",
 			"sourceEntry": "P7Ci5G_sourceEntry"
 		};
@@ -4364,7 +4363,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* current main conversation. Artifacts open through the Host path opener;
 		* sources open in a new tab; aside entries reopen their side conversation in
 		* the drawer (the same target as an inline anchor click).
-		* @module @deepseek-ai/dsh-client-ui-aside/AsideSidebar
+		* @module @ywzhang1031/dsh-client-ui-aside/AsideSidebar
 		*/
 		const REFRESH_MS = 5e3;
 		function AsideSidebar({ anchors, sessions, api, onOpenAside, t }) {
@@ -4540,7 +4539,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* (the selection watcher cannot see one, because stock renderers publish no
 		* message DOM identity). The message text is resolved from history so the
 		* anchor has a label; clicking an already-asked message reopens its aside.
-		* @module @deepseek-ai/dsh-client-ui-aside/AsideAskAction
+		* @module @ywzhang1031/dsh-client-ui-aside/AsideAskAction
 		*/
 		/** Extract the plain text of a content-block array (same projection as the drawer). */
 		function textOf(blocks) {
@@ -4687,7 +4686,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* shipped remotes), so no host composition change is needed; session
 		* attribution comes from the runtime sessions service instead of DOM
 		* attributes, which stock renderers do not publish.
-		* @module @deepseek-ai/dsh-client-ui-aside/client
+		* @module @ywzhang1031/dsh-client-ui-aside/client
 		*/
 		/** Dictionary namespace owned by this plugin. */
 		const NS = "aside";
@@ -4742,6 +4741,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			const sessions = ctx.sessions;
 			const asideDisposer = await ctx.remote.$mount(TYPERT_REMOTE);
 			ctx.effect(() => asideDisposer, "ui-aside: remote stub unmount");
+			const aside = ctx.get("remote.aside");
+			if (aside === void 0) throw new Error("ui-aside: mounted Remote namespace \"aside\" is unavailable");
 			/** Reopen one existing aside from the sidebar or an anchor click. */
 			const openExisting = (anchor) => {
 				drawer.openSub({
@@ -4763,7 +4764,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 				const messageId = draft.messageId;
 				if (parentSessionId === null) return false;
 				try {
-					const created = await ctx.remote.aside.create({ parentSessionId });
+					const created = await aside.create({ parentSessionId });
 					if (!created.ok) throw new Error(created.error.message);
 					const result = created.value;
 					const question = openingQuestion(input, anchors.ensure({

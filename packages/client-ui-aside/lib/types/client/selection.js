@@ -7,7 +7,7 @@
  * left to the per-message aside action on the assistant-actions strip, which
  * receives the stock `messageId`. The watcher stays outside the React tree
  * entirely.
- * @module @deepseek-ai/dsh-client-ui-aside/selection
+ * @module @ywzhang1031/dsh-client-ui-aside/selection
  */
 /** Selection bounds: reject empty, whole-message, or giant selections. */
 export const MIN_SELECTION_CHARS = 2;

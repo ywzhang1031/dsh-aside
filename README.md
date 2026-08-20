@@ -104,13 +104,15 @@ dsh web
 
 ## Development
 
-**This repo is fully self-building — no DeepSeek Harness monorepo needed.** `pnpm install && pnpm build` compiles both packages (TypeScript → `lib/types`, tsdown → `lib/*.js`, and the Typert generator regenerates the Remote artifacts); `pnpm test` runs the 42-test suite (host gateway, read-only composition, selection/anchors/drawer/ask-action/apply-lifecycle browser units).
+**This repo is fully self-building — no DeepSeek Harness monorepo needed.** `pnpm install && pnpm build` compiles both packages (TypeScript → `lib/types`, tsdown → `lib/*.js`). The Host owns and type-checks its Typert contract, without relying on project registration from the DSH monorepo. `pnpm test` runs 46 tests covering the host gateway, read-only composition, publication contracts, and the browser selection/anchors/drawer/message-action/apply lifecycle.
 
 ```sh
 pnpm install
-pnpm build          # tsc -b + tsdown (+ Typert codegen) for both packages
-pnpm test           # 42 tests, zero DSH install required
+pnpm build          # tsc -b + tsdown for both packages
+pnpm test           # 46 tests, zero DSH install required
 npm run pack        # → dist/*.tgz
+pnpm smoke          # install the tarballs into an isolated stock DSH_HOME and cold-boot it
+pnpm verify         # test + build + pack + stock DSH smoke
 ```
 
 ### Iterating on a running DSH
@@ -132,7 +134,7 @@ For distribution, the pack flow is the same as the install section: `npm run pac
 
 ### Compatibility canary
 
-The exact aside toolset on the shipped base+web composition is pinned by 2 e2e tests that live in a DSH monorepo checkout (they boot the real bundles). After editing the composition, re-run them there before tagging a release.
+`pnpm smoke` creates a temporary `DSH_HOME`, lets stock DSH generate a fresh web profile, installs both tarballs exactly as a user would, verifies the composed config, boots the Web UI on a random port, and confirms that the browser entry contains this plugin. CI runs the complete `pnpm verify` lane on Node 24 with `@deepseek-ai/dsh@0.1.0-rc.7`; no second monorepo checkout is required.
 
 ## Limitations & deferred work
 

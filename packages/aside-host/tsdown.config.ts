@@ -1,14 +1,15 @@
 import { defineConfig } from 'tsdown'
-import { typertPlugin } from '@deepseek-ai/dsh-typert-generator/tsdown'
 
 /**
- * Standalone host build: bundle the tsc-emitted entries and run the Typert
- * generator in package mode (emits lib/typert.host.* and
- * lib/typert.remote-client.* for the browser Remote stub).
+ * Standalone host build: bundle the tsc-emitted runtime, invariant, and
+ * package-owned Typert contract entries. The official generator depends on
+ * the complete DSH monorepo project-reference graph, so this independent
+ * plugin publishes its small Remote descriptor directly against the public
+ * Typert protocol instead.
  */
 export default defineConfig({
   name: '@ywzhang1031/dsh-aside-host',
-  entry: ['lib/types/{index,invariant}.js'],
+  entry: ['lib/types/{index,invariant,typert.host,typert.remote-client}.js'],
   outDir: 'lib',
   format: ['esm'],
   platform: 'node',
@@ -16,5 +17,7 @@ export default defineConfig({
   fixedExtension: false,
   dts: false,
   clean: false,
-  plugins: [typertPlugin({ mode: 'package', faces: ['host'] })],
+  outputOptions: {
+    chunkFileNames: 'typert-contract.js',
+  },
 })

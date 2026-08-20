@@ -183,7 +183,11 @@ function clientConfig(id: string, entry: string): UserConfig {
     // must carry the TS/TSX mapping consumed by browser profiling tools.
     sourcemap: true,
     clean: false,
-    external: [...CLIENT_EXTERNALS],
+    deps: {
+      neverBundle: [...CLIENT_EXTERNALS],
+      alwaysBundle: (dependency: string) => CLIENT_EXTERNALS.includes(dependency) ? undefined : true,
+      onlyBundle: ['zod'],
+    },
     // Browser bundles inline node-idiom deps (zustand/immer read
     // process.env.NODE_ENV; zustand's esm build also probes
     // import.meta.env.MODE, which a CJS output cannot carry — rolldown flags
@@ -204,7 +208,6 @@ function clientConfig(id: string, entry: string): UserConfig {
     // every non-shared dep). A require() the table cannot answer is a
     // guaranteed runtime throw, so the rule is the table list itself: no
     // opinion for table entries (external above wins), bundle everything else.
-    noExternal: (id: string) => (CLIENT_EXTERNALS.includes(id) ? undefined : true),
     plugins: [{
       // Bundle purity gate (build-time mirror of the module-edge rules):
       // platform seed entries stay external, inline-safe wire layers inline,
@@ -243,7 +246,8 @@ function clientConfig(id: string, entry: string): UserConfig {
           minify: true,
         })
         const classMap: Record<string, string> = {}
-        for (const [local, exp] of Object.entries(cssExports ?? {})) classMap[local] = exp.name
+        const sortedExports = Object.entries(cssExports ?? {}).sort(([left], [right]) => left.localeCompare(right))
+        for (const [local, exp] of sortedExports) classMap[local] = exp.name
         // One <style data-plugin> per module file; idempotent under re-evaluation.
         return [
           `const css = ${JSON.stringify(code.toString())};`,

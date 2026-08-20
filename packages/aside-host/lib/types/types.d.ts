@@ -2,7 +2,7 @@
  * Wire vocabulary for the aside Remote domain: the payloads a browser
  * client sends and the results the gateway answers, kept JSON-serializable
  * and free of Host-only service types.
- * @module @deepseek-ai/dsh-aside-host/types
+ * @module @ywzhang1031/dsh-aside-host/types
  */
 /** Request: create one read-only side conversation under a parent session. */
 export interface AsideCreateRequest {

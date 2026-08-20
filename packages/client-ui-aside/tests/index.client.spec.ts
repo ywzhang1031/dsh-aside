@@ -71,7 +71,8 @@ async function bench(remote: Record<string, unknown>) {
       },
     },
   } as never)
-  const mount = vi.fn(async () => {})
+  ctx.provide('remote.aside', remote as never)
+  const mount = vi.fn(async () => () => {})
   ctx.provide('remote', { $mount: mount } as never)
   return { ctx, mount, remote }
 }
@@ -117,7 +118,8 @@ describe('ui-aside apply', () => {
       value: { sessionId: 'sub-1' },
     }))
     const { ctx, remote } = await bench({ create })
-    // The plugin mounts the stub; after mount, ctx.remote.aside is the stub.
+    // The plugin mounts the stub; after mount, `remote.aside` is a standalone
+    // Cordis namespace service captured by the apply closure.
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
     // Drive the draft through the drawer store via the ask action path is

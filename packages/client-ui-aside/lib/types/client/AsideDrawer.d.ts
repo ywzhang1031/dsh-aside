@@ -5,7 +5,7 @@
  * question with the anchored source attached, and only then does the
  * selection become a highlightable anchor. Closing an unanswered draft
  * leaves nothing behind. Existing asides reopen for follow-up questions.
- * @module @deepseek-ai/dsh-client-ui-aside/AsideDrawer
+ * @module @ywzhang1031/dsh-client-ui-aside/AsideDrawer
  */
 import type { IApiClient } from '@deepseek-ai/dsh-client-connection/client';
 import { DrawerStore } from './drawer-store.ts';

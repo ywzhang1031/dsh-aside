@@ -1,5 +1,6 @@
 import ts from 'typescript'
 import { defineConfig } from 'vitest/config'
+import { fileURLToPath } from 'node:url'
 
 const decoratorSyntax = /^\s*@[A-Za-z_$][\w$]*/m
 
@@ -35,6 +36,7 @@ function standardDecoratorPlugin() {
 export default defineConfig({
   plugins: [standardDecoratorPlugin()],
   test: {
+    setupFiles: [fileURLToPath(new URL('./tests/setup-browser-storage.ts', import.meta.url))],
     // Inline the @deepseek-ai dependency tree so Vite's transform pipeline
     // (not Node's ESM loader) processes it — built libs import stylesheets
     // (katex) and .ts sources that Node cannot load directly. Vite stubs

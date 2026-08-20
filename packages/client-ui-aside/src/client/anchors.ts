@@ -5,7 +5,7 @@
  * authority (parent lineage, aside lineage) lives in the session logs; a
  * lost anchor store degrades to anchors that simply no longer list, while
  * the side conversations stay reachable from the session list.
- * @module @deepseek-ai/dsh-client-ui-aside/anchors
+ * @module @ywzhang1031/dsh-client-ui-aside/anchors
  */
 
 /** One anchored span in a main conversation. */
@@ -125,7 +125,7 @@ export class AnchorStore {
 
 function defaultStorage(): Storage | undefined {
   try {
-    return typeof localStorage === 'undefined' ? undefined : localStorage
+    return typeof window === 'undefined' ? undefined : window.localStorage
   } catch {
     return undefined
   }

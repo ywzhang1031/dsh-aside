@@ -12,7 +12,7 @@
  * shipped remotes), so no host composition change is needed; session
  * attribution comes from the runtime sessions service instead of DOM
  * attributes, which stock renderers do not publish.
- * @module @deepseek-ai/dsh-client-ui-aside/client
+ * @module @ywzhang1031/dsh-client-ui-aside/client
  */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client';
 export { AnchorStore, type AsideAnchor } from './anchors.ts';

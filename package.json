@@ -2,16 +2,23 @@
   "name": "dsh-aside",
   "private": true,
   "version": "0.1.0",
+  "type": "module",
   "description": "Aside: read-only side conversations (旁注) for stock DeepSeek Harness — a pure-plugin overlay, no source modifications",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ywzhang1031/dsh-aside.git"
   },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "pnpm@11.7.0",
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "pack": "bash scripts/pack.sh"
+    "pack": "bash scripts/pack.sh",
+    "smoke": "bash scripts/smoke-stock-dsh.sh",
+    "verify": "pnpm test && pnpm build && pnpm run pack && pnpm smoke"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

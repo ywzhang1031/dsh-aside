@@ -6,7 +6,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * question with the anchored source attached, and only then does the
  * selection become a highlightable anchor. Closing an unanswered draft
  * leaves nothing behind. Existing asides reopen for follow-up questions.
- * @module @deepseek-ai/dsh-client-ui-aside/AsideDrawer
+ * @module @ywzhang1031/dsh-client-ui-aside/AsideDrawer
  */
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';

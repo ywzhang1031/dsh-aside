@@ -3,7 +3,7 @@
  * pending draft that only becomes a real aside once the user actually sends
  * a question. A closed unanswered draft leaves nothing behind — no session,
  * no anchor, no highlight.
- * @module @deepseek-ai/dsh-client-ui-aside/drawer-store
+ * @module @ywzhang1031/dsh-client-ui-aside/drawer-store
  */
 const CLOSED = {
     subSessionId: null,

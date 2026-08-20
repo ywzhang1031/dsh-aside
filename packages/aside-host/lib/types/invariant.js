@@ -1,5 +1,5 @@
-/** Package-owned invariant companion. @module @deepseek-ai/dsh-aside-host/invariant */
-const PACKAGE_NAME = '@deepseek-ai/dsh-aside-host';
+/** Package-owned invariant companion. @module @ywzhang1031/dsh-aside-host/invariant */
+const PACKAGE_NAME = '@ywzhang1031/dsh-aside-host';
 /** Cordis companion plugin name. */
 export const name = 'aside-host-invariant';
 /** Service required before the companion can reserve package ownership. */

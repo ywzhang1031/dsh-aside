@@ -104,13 +104,15 @@ dsh web
 
 ## 开发
 
-**本仓库完全自构建——不再需要 DeepSeek Harness monorepo。** `pnpm install && pnpm build` 会编译两个包（TypeScript → `lib/types`，tsdown → `lib/*.js`，Typert 生成器重新产出 Remote 产物）；`pnpm test` 运行 42 个测试（host 网关、只读组合、浏览器端的选区/锚点/抽屉/消息级动作/apply 生命周期单测）。
+**本仓库完全自构建——不需要 DeepSeek Harness monorepo。** `pnpm install && pnpm build` 会编译两个包（TypeScript → `lib/types`，tsdown → `lib/*.js`）；Host 自己维护并类型检查 Typert contract，不依赖 DSH monorepo 的项目注册。`pnpm test` 运行 46 个测试，覆盖 host 网关、只读组合、发布包契约，以及浏览器端的选区/锚点/抽屉/消息级动作/apply 生命周期。
 
 ```sh
 pnpm install
-pnpm build          # tsc -b + tsdown（+ Typert 代码生成），两个包一起
-pnpm test           # 42 个测试，零 DSH 安装依赖
+pnpm build          # tsc -b + tsdown，两个包一起
+pnpm test           # 46 个测试，零 DSH 安装依赖
 npm run pack        # → dist/*.tgz
+pnpm smoke          # 用隔离 DSH_HOME 在 stock DSH 中安装 tarball 并冷启动
+pnpm verify         # test + build + pack + stock DSH smoke
 ```
 
 ### 在运行的 DSH 上迭代
@@ -132,7 +134,7 @@ pnpm build
 
 ### 兼容性金丝雀
 
-aside 在官方 base+web 组合上的精确工具集由 2 个 e2e 测试钉死（它们 boot 真实 bundle，存放在 DSH monorepo checkout 内）。改过组合后，发版前请在 monorepo 里重跑它们。
+`pnpm smoke` 会创建临时 `DSH_HOME`，让 stock DSH 自动生成全新的 web profile，再按发布方式安装两个 tarball、检查组合结果、随机端口启动 Web UI，并确认浏览器入口包含本插件。CI 在 Node 24 + `@deepseek-ai/dsh@0.1.0-rc.7` 上运行完整 `pnpm verify`；无需另一个 monorepo checkout。
 
 ## 限制与待办
 

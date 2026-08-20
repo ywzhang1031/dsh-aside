@@ -12,7 +12,7 @@
  * shipped remotes), so no host composition change is needed; session
  * attribution comes from the runtime sessions service instead of DOM
  * attributes, which stock renderers do not publish.
- * @module @deepseek-ai/dsh-client-ui-aside/client
+ * @module @ywzhang1031/dsh-client-ui-aside/client
  */
 // The generated Remote stub this plugin mounts itself, and the type-only
 // Remote method surface (ctx.remote.aside) it carries.
@@ -74,11 +74,14 @@ export async function apply(ctx) {
     const drawer = new DrawerStore();
     const { api } = ctx.get('connection');
     const sessions = ctx.sessions;
-    // Mount the generated Remote stub so `ctx.remote.aside` exists in THIS
-    // composition, mirroring what api-remotes does for the shipped remotes.
-    // Awaited before any aside call can be made; the disposer rides the fiber.
+    // Mount the package Remote stub, then capture the namespace service by its
+    // Cordis key. Dynamic namespaces are separate services (`remote.aside`),
+    // not properties covered by this plugin's static `remote` injection.
     const asideDisposer = await ctx.remote.$mount(asideRemote);
     ctx.effect(() => asideDisposer, 'ui-aside: remote stub unmount');
+    const aside = ctx.get('remote.aside');
+    if (aside === undefined)
+        throw new Error('ui-aside: mounted Remote namespace "aside" is unavailable');
     /** Reopen one existing aside from the sidebar or an anchor click. */
     const openExisting = (anchor) => {
         drawer.openSub({
@@ -102,7 +105,7 @@ export async function apply(ctx) {
         if (parentSessionId === null)
             return false;
         try {
-            const created = await ctx.remote.aside.create({ parentSessionId });
+            const created = await aside.create({ parentSessionId });
             if (!created.ok)
                 throw new Error(created.error.message);
             const result = created.value;

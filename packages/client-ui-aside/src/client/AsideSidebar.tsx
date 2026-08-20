@@ -4,7 +4,7 @@
  * current main conversation. Artifacts open through the Host path opener;
  * sources open in a new tab; aside entries reopen their side conversation in
  * the drawer (the same target as an inline anchor click).
- * @module @deepseek-ai/dsh-client-ui-aside/AsideSidebar
+ * @module @ywzhang1031/dsh-client-ui-aside/AsideSidebar
  */
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'

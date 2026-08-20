@@ -4,7 +4,7 @@
  * durable facts the tool cards present, folded across the whole conversation
  * instead of one turn. Pure functions; the sidebar component supplies the
  * history entries and the refresh cadence.
- * @module @deepseek-ai/dsh-client-ui-aside/fold
+ * @module @ywzhang1031/dsh-client-ui-aside/fold
  */
 
 /** One produced file across the conversation. */

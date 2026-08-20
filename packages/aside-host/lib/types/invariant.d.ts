@@ -1,4 +1,4 @@
-/** Package-owned invariant companion. @module @deepseek-ai/dsh-aside-host/invariant */
+/** Package-owned invariant companion. @module @ywzhang1031/dsh-aside-host/invariant */
 import type { Context } from '@deepseek-ai/cordis';
 /** Cordis companion plugin name. */
 export declare const name = "aside-host-invariant";

@@ -29,7 +29,7 @@
  * The gateway composes everything itself: it needs no agent-preset roster
  * and no deployment configuration, so it runs on a stock DSH deployment with
  * no source modifications.
- * @module @deepseek-ai/dsh-aside-host
+ * @module @ywzhang1031/dsh-aside-host
  */
 
 import { randomUUID } from 'node:crypto'

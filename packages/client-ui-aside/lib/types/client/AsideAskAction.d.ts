@@ -5,7 +5,7 @@
  * (the selection watcher cannot see one, because stock renderers publish no
  * message DOM identity). The message text is resolved from history so the
  * anchor has a label; clicking an already-asked message reopens its aside.
- * @module @deepseek-ai/dsh-client-ui-aside/AsideAskAction
+ * @module @ywzhang1031/dsh-client-ui-aside/AsideAskAction
  */
 import type { IApiClient, MessageId } from '@deepseek-ai/dsh-client-connection/client';
 import type { AsideLocaleKey } from './locales.ts';

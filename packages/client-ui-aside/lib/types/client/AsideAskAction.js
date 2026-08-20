@@ -6,7 +6,7 @@ import { jsx as _jsx } from "react/jsx-runtime";
  * (the selection watcher cannot see one, because stock renderers publish no
  * message DOM identity). The message text is resolved from history so the
  * anchor has a label; clicking an already-asked message reopens its aside.
- * @module @deepseek-ai/dsh-client-ui-aside/AsideAskAction
+ * @module @ywzhang1031/dsh-client-ui-aside/AsideAskAction
  */
 import { useCallback, useRef, useState } from 'react';
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';

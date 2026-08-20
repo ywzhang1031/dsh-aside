@@ -27,11 +27,11 @@
       "default": "./lib/types/types.js"
     },
     "./typert": {
-      "types": "./lib/typert.host.d.ts",
+      "types": "./lib/types/typert.host.d.ts",
       "default": "./lib/typert.host.js"
     },
     "./remote": {
-      "types": "./lib/typert.remote-client.d.ts",
+      "types": "./lib/types/typert.remote-client.d.ts",
       "default": "./lib/typert.remote-client.js"
     },
     "./src/*": "./src/*",
@@ -92,7 +92,6 @@
     "@deepseek-ai/dsh-tool-pwsh": "^0.1.0-rc.7",
     "@deepseek-ai/dsh-tool-skill": "^0.1.0-rc.7",
     "@deepseek-ai/dsh-tool-web": "^0.1.0-rc.7",
-    "@deepseek-ai/dsh-typert-generator": "^0.1.0-rc.7",
     "@deepseek-ai/dsh-typert-protocol": "^0.1.0-rc.7",
     "@deepseek-ai/dsh-user-approval": "^0.1.0-rc.7",
     "@types/node": "^22.0.0",
