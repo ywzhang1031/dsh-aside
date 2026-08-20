@@ -1,6 +1,6 @@
 //#region lib/types/invariant.js
-/** Package-owned invariant companion. @module @ywzhang1031/dsh-client-ui-aside/invariant */
-const PACKAGE_NAME = "@ywzhang1031/dsh-client-ui-aside";
+/** Package-owned invariant companion. @module dsh-client-ui-aside/invariant */
+const PACKAGE_NAME = "dsh-client-ui-aside";
 /** Cordis companion plugin name. */
 const name = "aside-ui-invariant";
 /** Service required before the companion can reserve package ownership. */

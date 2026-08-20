@@ -1,8 +1,8 @@
-# @ywzhang1031/dsh-aside-host
+# dsh-aside-host
 
 [English](README.md) | 中文
 
-只读旁注的 Host 网关。`AsideGateway` 注册 `aside` 服务，发布两个生成的 direct Remote——`aside/create` 与 `aside/list`——供 [`@ywzhang1031/dsh-client-ui-aside`](../client-ui-aside/README.md) 界面消费。
+只读旁注的 Host 网关。`AsideGateway` 注册 `aside` 服务，发布两个生成的 direct Remote——`aside/create` 与 `aside/list`——供 [`dsh-client-ui-aside`](../client-ui-aside/README.md) 界面消费。
 
 **无需任何源码修改即可运行在 stock DSH 部署上**：网关用与官方组合相同的 stock 包与服务自行组装一切。
 

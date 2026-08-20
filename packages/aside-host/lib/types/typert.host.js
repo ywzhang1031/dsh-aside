@@ -1,4 +1,4 @@
-/** Host Typert contribution for the Aside Remote endpoints. @module @ywzhang1031/dsh-aside-host/typert */
+/** Host Typert contribution for the Aside Remote endpoints. @module dsh-aside-host/typert */
 import { ASIDE_CREATE_DESCRIPTOR, ASIDE_LIST_DESCRIPTOR, ASIDE_PACKAGE } from "./typert-contract.js";
 export const TYPERT = {
     package: ASIDE_PACKAGE,

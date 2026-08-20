@@ -1,4 +1,4 @@
-/** Browser Remote contribution for the Aside endpoints. @module @ywzhang1031/dsh-aside-host/remote */
+/** Browser Remote contribution for the Aside endpoints. @module dsh-aside-host/remote */
 import type { RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol';
 import type { AsideCreateRequest, AsideCreateResult, AsideListRequest, AsideListResult } from './types.ts';
 declare module '@deepseek-ai/dsh-typert-protocol' {

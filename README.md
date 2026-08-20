@@ -1,150 +1,107 @@
-# Aside · 旁注
+<div align="center">
 
-Read-only side conversations for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). Select any prose span in an assistant reply, ask a follow-up question in a **read-only side conversation** that is forked from the main conversation's context — without polluting the main thread, without spending its token budget, and without any ability to modify files.
+# dsh-aside · 旁注
 
-**A pure plugin: zero source modifications, zero preset files, zero deployment config.** It runs on a stock DSH installation — clone it, install two packages, restart.
+把追问留在原文旁边：为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 提供可持久化、只读的侧边对话。
 
-## Why
+[English](README.en.md) · [安装](#安装) · [使用](#使用) · [卸载](#卸载) · [参与开发](#参与开发)
 
-When the model finishes a long answer, you often want to drill into a small concept ("what does *balanced completed-turn prefix* mean here?") without:
+[![CI](https://github.com/ywzhang1031/dsh-aside/actions/workflows/ci.yml/badge.svg)](https://github.com/ywzhang1031/dsh-aside/actions/workflows/ci.yml)
+[![GitHub stars](https://img.shields.io/github/stars/ywzhang1031/dsh-aside?style=flat)](https://github.com/ywzhang1031/dsh-aside/stargazers)
+[![npm version](https://img.shields.io/npm/v/dsh-aside)](https://www.npmjs.com/package/dsh-aside)
+[![npm downloads](https://img.shields.io/npm/dm/dsh-aside)](https://www.npmjs.com/package/dsh-aside)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![DSH](https://img.shields.io/badge/DeepSeek%20Harness-0.1.0--rc.7-4b5563)](https://github.com/deepseek-ai/deepseek-harness)
 
-- polluting the main conversation's context window,
-- mixing side questions into the main thread's history,
-- or granting the side question any file-modifying power.
+</div>
 
-An **aside** (旁注) is exactly that: a child session with the parent's completed-turn history forked in, composed from a read-only world, and re-entered from the highlighted prose, the message's 💬 action, or the sidebar's **Aside chats** rail.
+## 为什么做旁注
 
-## Features
+我经常在一段很长的回答里遇到某个忘了、不懂，或者想继续推导的知识点、概念与公式。
 
-- **Select prose → ask**: a floating **就此提问** button appears over a selection (2–800 chars); clicking opens an EMPTY draft drawer — nothing is created until you actually send.
-- **Per-message entry**: every finalized assistant message gains a 💬 action on its stock action strip (the same extension point `ui-message-feedback` uses), with the message's exact id.
-- **Forked context**: the aside's log is seeded with the parent's balanced completed-turn prefix (the same cut `session.fork` applies) — the side conversation reads the main conversation's full state without sharing its token budget. Provider, model, and reasoning effort are inherited.
-- **Aside-only sidebar**: the right rail lists just the current conversation's aside chats (anchor summary + open state), each re-opening its aside, centering the exact prose, and briefly strengthening that highlight. No artifacts, no sources, no 5-second history polling.
-- **Hidden child sessions**: after the durability barrier, the plugin uses stock Workspace archiving to hide asides from grouped, ungrouped, flat-list, and search navigation while preserving logs and Workspace accounting. Existing asides are reconciled when their parent is loaded again.
-- **Durable aside index**: aside relationships live in the Host (child `parentSession` header + anchor encoded into the child's first message) — no `localStorage`. They survive page refresh and Host restart.
-- **Exact prose highlight**: when the anchor's precise span can be restored, the parent message highlights it (CSS Custom Highlight API, no `<mark>` wrapping); clicking the highlight reopens the aside. Falls back to message-level marking when the span cannot be recovered.
-- **Stable composer**: drafts and durable asides share one bottom model/reasoning, fixed read-only, command, and send toolbar. A draft previews the parent's model directory and applies local choices to the child before its first prompt without mutating the parent.
-- **Draft semantics**: closing an unanswered draft leaves nothing behind — no session, no anchor.
+直接在主对话里追问，边线问题很容易越问越远，回头时已经忘了最初要完成什么；另开一条对话，又会丢失当时的上下文。有些侧边对话虽然能暂时分流，但不持久，隔天再打开时，也很难想起自己当初究竟卡在哪里。
 
-## Security model: the read-only guarantee
+**旁注**把一条追问绑定到主对话中的具体文字，并以独立的只读会话持久保存。下一次打开主对话，仍然可以从原文高亮、消息按钮或右侧栏回到当时的问题。
 
-An aside is an ordinary Session created under a posture **nothing inside it can widen**:
+它更像写在书页边上的批注：当下不打断主线，日后还能知道自己为什么问，在原来的语境里温故而知新。
 
-1. **Composition** — the aside agent is composed from a read-only world (`composeReadOnlyWorld`): shell, file read + search, web search/fetch, skills, and a read-only persona. No delegation, no goals, no editor, no jobs.
-2. **`sandbox/mode: read-only`** — seeded into the aside's session log at creation; every confined bash/fs call folds to the OS-level read-only sandbox. A write attempt never reaches the filesystem.
-3. **`approval/policy: never`** — seeded beside it, so even the sandbox-escalation channel resolves deterministically to `rejected`.
+## 预览
 
-Both seeds are session-log events, so the posture survives restart by replay. The aside inherits the parent's workspace (`cwd`) and model route.
+![当前主对话的旁注侧栏](docs/images/aside-sidebar.jpg)
 
-### Honest boundaries
+| 创建旁注草稿 | 继续多轮旁注 |
+| --- | --- |
+| ![带引用原文、模型与只读状态的旁注草稿](docs/images/aside-draft.jpg) | ![持久化的多轮旁注对话](docs/images/aside-conversation.jpg) |
 
-- **Writes are refused, not hidden.** Stock `tool-fs` has no read-only mode, so the model *sees* `write`/`edit`; every call is deterministically refused (policy + OS sandbox).
-- **Read-only covers the filesystem, not the network.** The aside can fetch web pages and run read-only shell; treat it as a Q&A surface, not a security sandbox.
-- **The drawer does not toggle permissions.** There is no `/permission` in the aside, the command whitelist excludes `/permission`, `/plan`, and `/goal`, and there is no jump into the stock full-session page. The aside keeps its creation-time read-only posture.
-- **Exact highlight needs a restorable span.** When the Markdown-rendered text cannot be recovered precisely (or the browser lacks the CSS Custom Highlight API), the plugin degrades to message-level marking; the aside is always reachable from the sidebar and the 💬 action.
-- **Navigation hiding uses stock archive projection.** DSH `0.1.0-rc.7` has no general auxiliary-session visibility, so the plugin uses public `workspace.archiveSession`; this hides navigation rows without deleting logs or Workspace accounting.
+## 能做什么
 
-## Persistence: where the aside relationship lives
+- **锚定具体原文**：选中助手回复中的文字，或点击消息上的 💬 按钮，就地发起追问。
+- **保持主线干净**：旁注 fork 主对话已经完成的上下文，但不把边线问题写回主线程。
+- **持久化恢复**：锚点和旁注关系保存在 DSH 会话日志中，不依赖 `localStorage`；刷新和重启后仍可恢复。
+- **侧栏内使用**：旁注只出现在所属主对话的右侧栏，不会挤进左侧会话列表。
+- **统一输入体验**：草稿和已有旁注都可以选择模型、Reasoning 等级及白名单命令。
+- **固定只读**：旁注创建时写入 `sandbox/mode: read-only` 与 `approval/policy: never`，不能在抽屉中扩大权限。
 
-The Host is the single source of truth. Creating an aside:
+## 安装
 
-1. creates the child session with a durable `parentSession` header (the parent link), and
-2. encodes the full anchor (message id, exact prose, prefix/suffix disambiguation, offsets) into the child's first user message as a `[aside:…]` marker.
-
-`aside.list(parentSessionId)` recovers every aside by listing persisted session headers, filtering on `parentSession`, and reading each child's first message. The browser only mirrors `aside.create`/`aside.list` into an in-memory cache — it never writes a second local fact and never reads `localStorage`.
-
-> **Why not a custom session event?** Stock DSH `0.1.0-rc.7` has no public API for an out-of-repo plugin to mark a custom session event `ignorable`, so an unknown event type is refused by the persistence read path on reload. The anchor therefore rides the durable, known event types that ARE available (the `parentSession` header and the first `user/message`). This is documented, not patched around.
-
-## Install (stock DSH)
-
-Requires a stock [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) installation (web profile). No source modifications.
-
-### Step 0 — install DSH itself from npm (one-time, no monorepo)
+已有 DeepSeek Harness `0.1.0-rc.7` 时，只需一行：
 
 ```sh
-npm install -g @deepseek-ai/dsh        # latest = 0.1.0-rc.7
-dsh --help                             # sanity check
+dsh plugin --profile web add dsh-aside
 ```
 
-That's it — no cloning DeepSeek Harness, no building anything. The `dsh` command manages its own profile under `~/.dsh`.
-
-### Option A — tarballs (recommended, no npm publish needed)
+随后重启 `dsh web`。如果尚未安装 DSH：
 
 ```sh
-git clone https://github.com/ywzhang1031/dsh-aside.git
-cd dsh-aside
-npm run pack          # → dist/*.tgz
-
-dsh plugin add ./dist/ywzhang1031-dsh-aside-host-0.1.0.tgz
-dsh plugin add ./dist/ywzhang1031-dsh-client-ui-aside-0.1.0.tgz
-
-dsh web
+npm install -g @deepseek-ai/dsh@0.1.0-rc.7 pnpm@11.7.0
 ```
 
-Each package declares `dsh.bundle.patch`, so `dsh plugin add` automatically wires its row into the web composition's layer stack. No overlay file, no manual config.
+公开入口包会自动安装并组合 Host 与 Web UI 两个内部运行包；用户无需克隆仓库、构建源码或关心加载顺序。
 
-### Option B — overlay
+## 使用
+
+1. 在已完成的助手回复里选中文字，点击 **就此提问**；也可以点击该消息的 💬 按钮。
+2. 在草稿抽屉里确认引用原文，按需选择模型与 Reasoning，然后发送问题。真正发送前不会创建旁注。
+3. 继续在抽屉中多轮追问；旁注始终保持只读。
+4. 以后从高亮原文、💬 按钮或右侧 **旁注聊天** 列表重新进入。若原消息尚未加载，插件会自动补载更早历史再定位原文。
+
+## 卸载
+
+直接使用官方卸载命令：
 
 ```sh
-dsh plugin add ./dist/ywzhang1031-dsh-aside-host-0.1.0.tgz
-dsh plugin add ./dist/ywzhang1031-dsh-client-ui-aside-0.1.0.tgz
-dsh web --patch /path/to/dsh-aside/examples/aside.yml
+dsh plugin --profile web remove dsh-aside
 ```
 
-### Option C — npm (once published)
+在仓库内开发时，也可以使用跨平台辅助脚本；它兼容此前的双包本地安装：
 
 ```sh
-dsh plugin add @ywzhang1031/dsh-aside-host
-dsh plugin add @ywzhang1031/dsh-client-ui-aside
-dsh web
+pnpm plugin:uninstall -- --profile web
 ```
 
-## Usage
+完成后重启 `dsh web`。卸载只会从 profile 中移除插件 bundle，**不会删除已经存在的主对话或旁注会话日志**。
 
-1. Select prose in a settled assistant reply — the floating **就此提问** button appears; or click the message's 💬 action.
-2. The draft opens with a quote card and the parent's model/reasoning preview beside the fixed read-only and command controls. Nothing durable exists yet.
-3. Optionally change that draft route, then send — the Host creates the forked aside and persists its anchor; the client applies the draft route to the child before the first question. The parent is unaffected.
-4. Re-enter from the highlighted prose, the sidebar's **Aside chats**, or the per-message 💬 action; sidebar clicks precisely center and strengthen the anchored span, and the aside never appears in the left session list.
-5. Continue switching the aside's model/reasoning in the same composer, or type `/` to choose a whitelisted command.
+## 安全与兼容性
 
-## Compatibility
+- 只读限制覆盖文件系统，但不等同于无网络能力的安全沙箱：旁注仍可执行只读 Shell、读取文件并抓取网页。
+- stock `tool-fs` 仍会向模型展示 `write` / `edit`，但调用会被只读沙箱与拒绝审批策略阻断。
+- 精确高亮依赖可恢复的渲染文本；遇到重复片段、Markdown 渲染差异或浏览器不支持 Custom Highlight API 时，会降级为消息级定位。
+- 旁注子会话通过 DSH 公开的 archive 投影从左侧导航隐藏，日志与 Workspace 归属不会被删除。
+- 当前只验证 DSH `0.1.0-rc.7`；升级 DSH 前建议先运行本仓库的 `pnpm verify`。
 
-- Built against DeepSeek Harness `0.1.0-rc.7`.
-- All `@deepseek-ai/*` runtime dependencies are **peer dependencies** resolved from your DSH installation.
-- The browser half requires the stock `conversation.chat.assistant-actions` slot and the `shell.overlay` frame slot.
-- Message positioning and exact highlight use the stock `data-chat-anchor-key` row attribute as a *best-effort* local DOM hint, with the action node as fallback — never a CSS class name as the sole authority.
-
-## Development
-
-**This repo is fully self-building — no DeepSeek Harness monorepo needed.** `pnpm install && pnpm build` compiles both packages. `pnpm test` runs 92 tests covering the host gateway (create/list/concurrent idempotency/persistence-failure recovery/read-only composition), Workspace visibility, quote selection, message DOM registry, exact focus/highlighting, and the browser repository/drawer/draft-model/commands/selection/action/apply lifecycle.
+## 参与开发
 
 ```sh
 pnpm install
+pnpm test       # 94 tests
 pnpm build
-pnpm test           # 92 tests
-npm run pack        # → dist/*.tgz
-pnpm smoke          # install the tarballs into an isolated stock DSH_HOME and cold-boot it
-pnpm verify         # test + build + pack + stock DSH smoke
+pnpm run pack
+pnpm smoke      # 隔离 DSH_HOME：安装、冷启动、卸载
+pnpm verify     # test + build + pack + smoke
 ```
 
-### Iterating on a running DSH
-
-```sh
-dsh plugin add /path/to/dsh-aside/packages/aside-host
-dsh plugin add /path/to/dsh-aside/packages/client-ui-aside
-dsh web
-
-pnpm build   # then restart dsh web (browser-half changes hot-reload)
-```
-
-## Limitations & deferred work
-
-- **Drawer streaming is adaptive polling, not a live subscription.** The drawer polls the child history at 700ms while generating and backs off to 2.5s when idle (stopping when hidden/closed and refreshing immediately when visible again).
-- **A custom durable event type is unavailable on 0.1.0-rc.7** (no `ignorable` append for out-of-repo plugins), so the anchor rides the child's first message rather than a dedicated index event.
-- **Exact highlight is best-effort.** Markdown source vs. rendered text, repeated spans, and browsers without the Custom Highlight API degrade to message-level marking.
-- **A parent with no completed turn forks no history**; the aside starts empty and sees only the anchored source.
-- **Asides intentionally do not open as full sessions.** Stock `workspace.archiveSession` has no public inverse; keeping them drawer-only preserves the navigation hierarchy and strict read-only posture.
+Host、Web UI、生成产物与发布 manifest 都由本仓库维护，不需要 DeepSeek Harness monorepo。实现细节见 [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)。欢迎提交 Issue 与 Pull Request；功能声明应与可验证代码保持一致。
 
 ## License
 
-MIT © [ywzhang1031](https://github.com/ywzhang1031)
+[MIT](LICENSE) © [ywzhang1031](https://github.com/ywzhang1031)

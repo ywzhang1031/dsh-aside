@@ -5,11 +5,11 @@
  * no anchor, no highlight. The full {@link AsideAnchor} is carried so the
  * first send can hand it to `aside.create`; the Host (not the client)
  * persists it into the child's first message.
- * @module @ywzhang1031/dsh-client-ui-aside/drawer-store
+ * @module dsh-client-ui-aside/drawer-store
  */
 
-import type { AsideAnchor, AsideRecord } from '@ywzhang1031/dsh-aside-host/types'
-import { anchorKey } from '@ywzhang1031/dsh-aside-host/types'
+import type { AsideAnchor, AsideRecord } from 'dsh-aside-host/types'
+import { anchorKey } from 'dsh-aside-host/types'
 
 /** Immutable snapshot the drawer component renders. */
 export interface DrawerState {

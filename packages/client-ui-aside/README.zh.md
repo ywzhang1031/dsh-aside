@@ -1,4 +1,4 @@
-# @ywzhang1031/dsh-client-ui-aside
+# dsh-client-ui-aside
 
 [English](README.md) | 中文
 
@@ -18,7 +18,7 @@
 - **`AsideSidebar`** — 常驻右栏，只列当前对话的旁注聊天（无产出、无来源），显示当前打开状态与更新时间。
 - **`AsideAskAction`** — stock 助手消息动作条上的消息级入口，携带精确 `messageId`。
 
-持久权威——旁注会话、fork 血缘、只读姿态与锚点关系——都在 Host（`@ywzhang1031/dsh-aside-host`）一侧。
+持久权威——旁注会话、fork 血缘、只读姿态与锚点关系——都在 Host（`dsh-aside-host`）一侧。
 
 ## stock-only 取舍
 

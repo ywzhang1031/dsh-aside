@@ -8,7 +8,7 @@ import { defineConfig } from 'tsdown'
  * Typert protocol instead.
  */
 export default defineConfig({
-  name: '@ywzhang1031/dsh-aside-host',
+  name: 'dsh-aside-host',
   entry: ['lib/types/{index,invariant,typert.host,typert.remote-client}.js'],
   outDir: 'lib',
   format: ['esm'],

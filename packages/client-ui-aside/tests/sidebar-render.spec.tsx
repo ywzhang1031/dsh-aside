@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
-import type { AsideRecord } from '@ywzhang1031/dsh-aside-host/types'
+import type { AsideRecord } from 'dsh-aside-host/types'
 import { AsideRepository } from '../src/client/repository.ts'
 import { DrawerStore } from '../src/client/drawer-store.ts'
 import { AsideSidebar } from '../src/client/AsideSidebar.tsx'

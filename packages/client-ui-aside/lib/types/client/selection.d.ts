@@ -6,9 +6,9 @@
  * {@link resolveMessageId} (history matching) because stock renders the
  * assistant-actions strip in a sibling node of the message text. The watcher
  * stays outside the React tree entirely.
- * @module @ywzhang1031/dsh-client-ui-aside/selection
+ * @module dsh-client-ui-aside/selection
  */
-import type { AsideAnchor } from '@ywzhang1031/dsh-aside-host/types';
+import type { AsideAnchor } from 'dsh-aside-host/types';
 /** What the watcher resolved from one browser selection. */
 export interface SelectionContext {
     /** The main conversation the selection lives in (current session). */

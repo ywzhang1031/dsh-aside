@@ -1,5 +1,5 @@
 {
-  "name": "@ywzhang1031/dsh-aside-host",
+  "name": "dsh-aside-host",
   "description": "Host gateway creating read-only Q&A side conversations (aside) under a parent session — a pure plugin for stock DeepSeek Harness",
   "version": "0.1.0",
   "publishConfig": {

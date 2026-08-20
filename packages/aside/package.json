@@ -1,0 +1,42 @@
+{
+  "name": "dsh-aside",
+  "description": "Persistent read-only side conversations anchored to exact prose in DeepSeek Harness",
+  "version": "0.1.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ywzhang1031/dsh-aside.git",
+    "directory": "packages/aside"
+  },
+  "homepage": "https://github.com/ywzhang1031/dsh-aside#readme",
+  "bugs": {
+    "url": "https://github.com/ywzhang1031/dsh-aside/issues"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis-plugin",
+    "annotations",
+    "side-conversations"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "dependencies": {
+    "dsh-aside-host": "workspace:0.1.0",
+    "dsh-client-ui-aside": "workspace:0.1.0"
+  }
+}

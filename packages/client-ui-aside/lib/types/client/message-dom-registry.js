@@ -6,7 +6,7 @@
  * scroll to a message — using the stock `data-chat-anchor-key` row as a
  * local, verifiable DOM hint, with the action sentinel as the fallback (never
  * a stock CSS class name as the sole authority).
- * @module @ywzhang1031/dsh-client-ui-aside/message-dom-registry
+ * @module dsh-client-ui-aside/message-dom-registry
  */
 /**
  * Resolve the nearest chat-anchor row above a node, or null when the node

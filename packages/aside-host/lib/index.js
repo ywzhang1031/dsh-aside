@@ -27,7 +27,7 @@ import * as ToolSkill from "@deepseek-ai/dsh-tool-skill";
 * it back to its parent, so {@link AsideGateway.list} can recover every aside
 * for a parent by reading the child's first message. No localStorage and no
 * DSH source patch are involved.
-* @module @ywzhang1031/dsh-aside-host/types
+* @module dsh-aside-host/types
 */
 /** The on-wire/anchor schema revision this package writes and reads. */
 const ASIDE_SCHEMA_VERSION = 1;
@@ -131,7 +131,7 @@ function anchorMessage(anchor) {
 * The gateway composes everything itself: it needs no agent-preset roster
 * and no deployment configuration, so it runs on a stock DSH deployment with
 * no source modifications.
-* @module @ywzhang1031/dsh-aside-host
+* @module dsh-aside-host
 */
 var __runInitializers = function(thisArg, initializers, value) {
 	var useValue = arguments.length > 2;

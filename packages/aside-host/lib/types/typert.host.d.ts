@@ -1,4 +1,4 @@
-/** Host Typert contribution for the Aside Remote endpoints. @module @ywzhang1031/dsh-aside-host/typert */
+/** Host Typert contribution for the Aside Remote endpoints. @module dsh-aside-host/typert */
 export declare const TYPERT: {
     package: string;
     face: string;

@@ -6,7 +6,7 @@
  * `startOffset` (character offset inside the message's plain text). None of
  * these is a sole source of truth — restore tries raw then whitespace-
  * normalized matching and degrades gracefully.
- * @module @ywzhang1031/dsh-client-ui-aside/quote
+ * @module dsh-client-ui-aside/quote
  */
 /** Collapse every whitespace run to one space and trim (matching normalizer). */
 export function normalizeText(text) {

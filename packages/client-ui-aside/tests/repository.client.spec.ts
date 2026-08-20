@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import type { AsideRecord } from '@ywzhang1031/dsh-aside-host/types'
+import type { AsideRecord } from 'dsh-aside-host/types'
 import { AsideRepository, asideText } from '../src/client/repository.ts'
 
 function record(overrides: Partial<AsideRecord> = {}): AsideRecord {

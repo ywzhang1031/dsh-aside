@@ -64,13 +64,27 @@ const RUNTIME_STORE_EXEMPTION = '@deepseek-ai/dsh-client-runtime/client'
 /** Externals resolved from the loader module table: the platform seed entries plus the documented runtime exemption. */
 export const CLIENT_EXTERNALS: readonly string[] = [...PLATFORM_MODULES, RUNTIME_STORE_EXEMPTION]
 
-const REPOSITORY_ROOT = fileURLToPath(new URL('../..', import.meta.url))
+const REPOSITORY_ROOT = fileURLToPath(new URL('..', import.meta.url))
+
+/** Convert a physical repository file into a stable, slash-separated id. */
+function repositorySourceId(source: string): string {
+  const repositoryPath = relative(REPOSITORY_ROOT, source)
+  if (repositoryPath === '' || repositoryPath === '..' || repositoryPath.startsWith(`..${sep}`)) {
+    throw new Error(`client bundle asset is outside the repository: ${source}`)
+  }
+  return repositoryPath.split(sep).join('/')
+}
+
+/** Resolve a stable repository id back to its physical file. */
+function repositorySourcePath(sourceId: string): string {
+  return resolvePath(REPOSITORY_ROOT, ...sourceId.split('/'))
+}
 
 /** Rebase a physical lib-relative source onto a browser URL that mirrors the repository directories. */
 function browserSourcePath(source: string, sourcemapPath: string): string {
   if (!source.startsWith('.')) return source
   const physicalSource = resolvePath(dirname(sourcemapPath), source)
-  const repositoryPath = relative(REPOSITORY_ROOT, physicalSource).split(sep).join('/')
+  const repositoryPath = repositorySourceId(physicalSource)
   return repositoryPath.startsWith('packages/') ? `../../../${repositoryPath}` : source
 }
 
@@ -230,12 +244,15 @@ function clientConfig(id: string, entry: string): UserConfig {
       name: 'dsh-css-modules-inline',
       resolveId(source: string, importer: string | undefined) {
         if (!source.endsWith('.module.css')) return null
-        const abs = importer !== undefined ? sourceAssetPath(source, importer) : source
-        return CSS_VIRTUAL_PREFIX + abs + CSS_VIRTUAL_SUFFIX
+        const physicalSource = importer !== undefined
+          ? sourceAssetPath(source, importer)
+          : resolvePath(source)
+        return CSS_VIRTUAL_PREFIX + repositorySourceId(physicalSource) + CSS_VIRTUAL_SUFFIX
       },
       async load(virtualId: string) {
         if (!virtualId.startsWith(CSS_VIRTUAL_PREFIX)) return null
-        const fileId = virtualId.slice(CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
+        const sourceId = virtualId.slice(CSS_VIRTUAL_PREFIX.length, -CSS_VIRTUAL_SUFFIX.length)
+        const fileId = repositorySourcePath(sourceId)
         // The virtual id otherwise hides the physical stylesheet from Rolldown's watch graph.
         this.addWatchFile(fileId)
         const source = await readFile(fileId)

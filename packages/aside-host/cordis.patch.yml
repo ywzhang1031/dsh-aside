@@ -3,4 +3,4 @@
 # installed with `dsh plugin add`, so this row composes automatically.
 - insert:
     - id: aside-host
-      name: '@ywzhang1031/dsh-aside-host'
+      name: 'dsh-aside-host'

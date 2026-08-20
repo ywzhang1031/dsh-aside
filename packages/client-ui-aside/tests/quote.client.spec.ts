@@ -6,7 +6,7 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest'
-import type { AsideAnchor } from '@ywzhang1031/dsh-aside-host/types'
+import type { AsideAnchor } from 'dsh-aside-host/types'
 import { buildQuote, normalizeText, restoreRange, restoreInConversation } from '../src/client/quote.ts'
 
 const docs: Document[] = []

@@ -1,4 +1,4 @@
-/** Browser Remote contribution for the Aside endpoints. @module @ywzhang1031/dsh-aside-host/remote */
+/** Browser Remote contribution for the Aside endpoints. @module dsh-aside-host/remote */
 import { ASIDE_CREATE_DESCRIPTOR, ASIDE_LIST_DESCRIPTOR, ASIDE_PACKAGE } from "./typert-contract.js";
 export const TYPERT_REMOTE = {
     package: ASIDE_PACKAGE,

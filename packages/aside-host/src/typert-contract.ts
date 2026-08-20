@@ -1,13 +1,13 @@
 /**
  * Package-owned Remote descriptor shared by the Host registry contribution
  * and the browser Remote stub.
- * @module @ywzhang1031/dsh-aside-host/typert-contract
+ * @module dsh-aside-host/typert-contract
  */
 
 import type { InvocationDescriptor } from '@deepseek-ai/dsh-typert-protocol'
 import { z } from 'zod'
 
-export const ASIDE_PACKAGE = '@ywzhang1031/dsh-aside-host'
+export const ASIDE_PACKAGE = 'dsh-aside-host'
 
 const anchorSchema = z.object({
   messageId: z.string().nullable(),

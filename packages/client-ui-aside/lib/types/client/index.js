@@ -15,11 +15,11 @@
  * attribution comes from the runtime sessions service plus history matching
  * (stock renders the assistant-actions strip in a sibling node of the message
  * text, so the selection cannot be attributed by sentinel containment).
- * @module @ywzhang1031/dsh-client-ui-aside/client
+ * @module dsh-client-ui-aside/client
  */
 // The generated Remote stub this plugin mounts itself, and the type-only
 // Remote method surface (ctx.remote.aside) it carries.
-import asideRemote from '@ywzhang1031/dsh-aside-host/remote';
+import asideRemote from 'dsh-aside-host/remote';
 import { AsideRepository } from "./repository.js";
 import { DrawerStore } from "./drawer-store.js";
 import { SelectionWatcher, resolveMessageId } from "./selection.js";

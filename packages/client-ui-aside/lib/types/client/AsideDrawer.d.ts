@@ -9,7 +9,7 @@
  * first prompt instead of mutating the parent.
  * History streams via adaptive polling (fast while generating, backing off
  * when idle, stopping when hidden/closed) with autoscroll.
- * @module @ywzhang1031/dsh-client-ui-aside/AsideDrawer
+ * @module dsh-client-ui-aside/AsideDrawer
  */
 import type { IApiClient } from '@deepseek-ai/dsh-client-connection/client';
 import { DrawerStore } from './drawer-store.ts';

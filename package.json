@@ -18,6 +18,7 @@
     "test": "pnpm -r test",
     "pack": "bash scripts/pack.sh",
     "smoke": "bash scripts/smoke-stock-dsh.sh",
+    "plugin:uninstall": "node scripts/uninstall.mjs",
     "verify": "pnpm test && pnpm build && pnpm run pack && pnpm smoke"
   },
   "devDependencies": {

@@ -1,10 +1,10 @@
 /**
  * Package-owned Remote descriptor shared by the Host registry contribution
  * and the browser Remote stub.
- * @module @ywzhang1031/dsh-aside-host/typert-contract
+ * @module dsh-aside-host/typert-contract
  */
 import { z } from 'zod';
-export declare const ASIDE_PACKAGE = "@ywzhang1031/dsh-aside-host";
+export declare const ASIDE_PACKAGE = "dsh-aside-host";
 /** Create one read-only side conversation and persist its anchor relationship. */
 export declare const ASIDE_CREATE_DESCRIPTOR: {
     id: string;

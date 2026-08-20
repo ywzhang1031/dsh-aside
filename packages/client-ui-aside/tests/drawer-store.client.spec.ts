@@ -6,8 +6,8 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import type { AsideAnchor } from '@ywzhang1031/dsh-aside-host/types'
-import { anchorMessage } from '@ywzhang1031/dsh-aside-host/types'
+import type { AsideAnchor } from 'dsh-aside-host/types'
+import { anchorMessage } from 'dsh-aside-host/types'
 import { DrawerStore } from '../src/client/drawer-store.ts'
 import { projectHistory } from '../src/client/AsideDrawer.tsx'
 

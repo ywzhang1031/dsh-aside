@@ -1,8 +1,8 @@
-# @ywzhang1031/dsh-aside-host
+# dsh-aside-host
 
 English | [中文](README.zh.md)
 
-Host gateway for read-only side conversations ("旁注"). `AsideGateway` registers the `aside` service and publishes two generated direct Remotes — `aside/create` and `aside/list` — consumed by the [`@ywzhang1031/dsh-client-ui-aside`](../client-ui-aside/README.md) surface.
+Host gateway for read-only side conversations ("旁注"). `AsideGateway` registers the `aside` service and publishes two generated direct Remotes — `aside/create` and `aside/list` — consumed by the [`dsh-client-ui-aside`](../client-ui-aside/README.md) surface.
 
 Runs on a **stock DSH deployment with no source modifications**: the gateway composes everything itself through the same stock packages and services the shipped compositions use.
 

@@ -5,11 +5,11 @@
  * session. A freshly created aside is added to the cache directly from the
  * create response (no second local fact), and switching parent sessions
  * triggers one `aside.list` refresh. No polling and no `localStorage`.
- * @module @ywzhang1031/dsh-client-ui-aside/repository
+ * @module dsh-client-ui-aside/repository
  */
 
-import type { AsideAnchor, AsideRecord } from '@ywzhang1031/dsh-aside-host/types'
-import { anchorKey } from '@ywzhang1031/dsh-aside-host/types'
+import type { AsideAnchor, AsideRecord } from 'dsh-aside-host/types'
+import { anchorKey } from 'dsh-aside-host/types'
 
 /**
  * The remote namespace face this repository consumes (mounted by the plugin).

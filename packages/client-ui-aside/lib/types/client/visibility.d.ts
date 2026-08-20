@@ -1,6 +1,6 @@
 /** Plugin-owned projection that keeps durable aside sessions out of DSH navigation. */
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client';
-import type { AsideRecord } from '@ywzhang1031/dsh-aside-host/types';
+import type { AsideRecord } from 'dsh-aside-host/types';
 /** Minimal public Workspace face used by the aside plugin. */
 export interface AsideWorkspaceFace {
     readonly list: {

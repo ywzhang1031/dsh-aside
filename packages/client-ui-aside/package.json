@@ -1,5 +1,5 @@
 {
-  "name": "@ywzhang1031/dsh-client-ui-aside",
+  "name": "dsh-client-ui-aside",
   "description": "Read-only side conversations for stock DeepSeek Harness: prose selection, floating ask button, per-message aside action, sidebar rail, and the frame drawer",
   "version": "0.1.0",
   "publishConfig": {
@@ -65,7 +65,7 @@
     "@deepseek-ai/dsh-client-ui-primitives": "*",
     "@deepseek-ai/dsh-client-ui-slots": "*",
     "@deepseek-ai/dsh-invariants": "*",
-    "@ywzhang1031/dsh-aside-host": "*",
+    "dsh-aside-host": "*",
     "react": "^18.2.0"
   },
   "devDependencies": {
@@ -84,7 +84,7 @@
     "@testing-library/react": "^16.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^18.2.0",
-    "@ywzhang1031/dsh-aside-host": "workspace:*",
+    "dsh-aside-host": "workspace:*",
     "jsdom": "^29.1.1",
     "lightningcss": "^1.32.0",
     "react": "^18.2.0",

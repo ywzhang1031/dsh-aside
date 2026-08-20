@@ -6,10 +6,10 @@
  * `startOffset` (character offset inside the message's plain text). None of
  * these is a sole source of truth — restore tries raw then whitespace-
  * normalized matching and degrades gracefully.
- * @module @ywzhang1031/dsh-client-ui-aside/quote
+ * @module dsh-client-ui-aside/quote
  */
 
-import type { AsideAnchor } from '@ywzhang1031/dsh-aside-host/types'
+import type { AsideAnchor } from 'dsh-aside-host/types'
 
 /** A text node plus its character offsets inside a message's concatenated text. */
 export interface TextSpan {

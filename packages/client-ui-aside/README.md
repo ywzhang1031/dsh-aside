@@ -1,4 +1,4 @@
-# @ywzhang1031/dsh-client-ui-aside
+# dsh-client-ui-aside
 
 English | [中文](README.zh.md)
 
@@ -18,7 +18,7 @@ The plugin owns these pieces:
 - **`AsideSidebar`** — the standing rail listing only the current conversation's aside chats (no artifacts, no sources), including current-open state and update time.
 - **`AsideAskAction`** — the per-message entry that carries the message's exact `messageId`, resolves its text from history, and opens the same draft drawer.
 
-The durable authority — the aside session, its fork lineage, its read-only posture, and the anchor relationship — lives in the Host (`@ywzhang1031/dsh-aside-host`).
+The durable authority — the aside session, its fork lineage, its read-only posture, and the anchor relationship — lives in the Host (`dsh-aside-host`).
 
 ## Stock-only trade-offs
 

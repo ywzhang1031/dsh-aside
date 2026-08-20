@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: "@ywzhang1031/dsh-client-ui-aside",
+	id: "dsh-client-ui-aside",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -4025,9 +4025,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		/**
 		* Package-owned Remote descriptor shared by the Host registry contribution
 		* and the browser Remote stub.
-		* @module @ywzhang1031/dsh-aside-host/typert-contract
+		* @module dsh-aside-host/typert-contract
 		*/
-		const ASIDE_PACKAGE = "@ywzhang1031/dsh-aside-host";
+		const ASIDE_PACKAGE = "dsh-aside-host";
 		const anchorSchema = object({
 			messageId: string().nullable(),
 			exact: string(),
@@ -4046,7 +4046,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		});
 		//#endregion
 		//#region ../aside-host/lib/typert.remote-client.js
-		/** Browser Remote contribution for the Aside endpoints. @module @ywzhang1031/dsh-aside-host/remote */
+		/** Browser Remote contribution for the Aside endpoints. @module dsh-aside-host/remote */
 		const TYPERT_REMOTE = {
 			package: ASIDE_PACKAGE,
 			descriptors: [{
@@ -4147,7 +4147,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* session. A freshly created aside is added to the cache directly from the
 		* create response (no second local fact), and switching parent sessions
 		* triggers one `aside.list` refresh. No polling and no `localStorage`.
-		* @module @ywzhang1031/dsh-client-ui-aside/repository
+		* @module dsh-client-ui-aside/repository
 		*/
 		/** Normalize one record's anchor text for the sidebar display. */
 		function asideText(record, max = 60) {
@@ -4247,7 +4247,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* no anchor, no highlight. The full {@link AsideAnchor} is carried so the
 		* first send can hand it to `aside.create`; the Host (not the client)
 		* persists it into the child's first message.
-		* @module @ywzhang1031/dsh-client-ui-aside/drawer-store
+		* @module dsh-client-ui-aside/drawer-store
 		*/
 		const CLOSED = {
 			subSessionId: null,
@@ -4358,7 +4358,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* `startOffset` (character offset inside the message's plain text). None of
 		* these is a sole source of truth — restore tries raw then whitespace-
 		* normalized matching and degrades gracefully.
-		* @module @ywzhang1031/dsh-client-ui-aside/quote
+		* @module dsh-client-ui-aside/quote
 		*/
 		/** Collapse every whitespace run to one space and trim (matching normalizer). */
 		function normalizeText(text) {
@@ -4574,7 +4574,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* scroll to a message — using the stock `data-chat-anchor-key` row as a
 		* local, verifiable DOM hint, with the action sentinel as the fallback (never
 		* a stock CSS class name as the sole authority).
-		* @module @ywzhang1031/dsh-client-ui-aside/message-dom-registry
+		* @module dsh-client-ui-aside/message-dom-registry
 		*/
 		/**
 		* Resolve the nearest chat-anchor row above a node, or null when the node
@@ -4637,7 +4637,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* {@link resolveMessageId} (history matching) because stock renders the
 		* assistant-actions strip in a sibling node of the message text. The watcher
 		* stays outside the React tree entirely.
-		* @module @ywzhang1031/dsh-client-ui-aside/selection
+		* @module dsh-client-ui-aside/selection
 		*/
 		/** Selection bounds: reject empty, whole-message, or giant selections. */
 		const MIN_SELECTION_CHARS = 2;
@@ -4811,7 +4811,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* `caretPositionFromPoint`/`caretRangeFromPoint` and tests membership in
 		* each aside's restored Range. Browsers without Custom Highlight fall back to
 		* message-level styling; the caller owns that CSS class.
-		* @module @ywzhang1031/dsh-client-ui-aside/highlight
+		* @module dsh-client-ui-aside/highlight
 		*/
 		/** The single CSS highlight name shared by every aside's exact highlight. */
 		const HIGHLIGHT_NAME = "aside-highlight";
@@ -4986,12 +4986,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			return restoreRange(row, anchor);
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/evan/Desktop/dsh-aside/packages/client-ui-aside/src/client/AsideDrawer.module.css.mjs
+		//#region \0dsh-css:packages/client-ui-aside/src/client/AsideDrawer.module.css.mjs
 		const css$2 = ".seqwXG_drawer{z-index:60;border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:12px;flex-direction:column;width:min(420px,100vw - 24px);animation:.2s ease-out seqwXG_aside-drawer-in;display:flex;position:fixed;top:12px;bottom:12px;right:12px;overflow:hidden;box-shadow:0 12px 40px #0000002e}@keyframes seqwXG_aside-drawer-in{0%{opacity:0;transform:translate(12px)}to{opacity:1;transform:translate(0)}}.seqwXG_drawer.seqwXG_closing{pointer-events:none;animation:.16s ease-in forwards seqwXG_aside-drawer-out}@keyframes seqwXG_aside-drawer-out{0%{opacity:1;transform:translate(0)}to{opacity:0;transform:translate(12px)}}@media (prefers-reduced-motion:reduce){.seqwXG_drawer,.seqwXG_drawer.seqwXG_closing{animation:none}}.seqwXG_header{border-bottom:1px solid var(--dsw-alias-line-weak,#7f7f7f40);padding:12px 44px 10px 14px;position:relative}.seqwXG_titleRow{align-items:center;gap:8px;min-width:0;display:flex}.seqwXG_kindLabel{color:var(--dsw-alias-state-business-primary,#1a6bff);flex:none;font-size:12px;font-weight:600}.seqwXG_title{text-overflow:ellipsis;white-space:nowrap;margin:0;font-size:15px;font-weight:600;overflow:hidden}.seqwXG_readonlyBadge{border:1px solid var(--dsw-alias-state-warning,#b26a00);color:var(--dsw-alias-state-warning,#b26a00);border-radius:999px;flex:none;padding:1px 8px;font-size:11px}.seqwXG_select{border:1px solid var(--dsw-alias-line-weak,#7f7f7f59);background:var(--dsw-alias-bg-base,#fafafa);max-width:150px;font:inherit;color:var(--dsw-alias-text-primary,#1a1a1a);border-radius:6px;padding:2px 4px;font-size:12px}.seqwXG_generating{color:var(--dsw-alias-text-secondary,#666);align-items:center;gap:5px;font-size:11px;display:inline-flex}.seqwXG_activityDot{background:var(--dsw-alias-state-business-primary,#1a6bff);border-radius:50%;width:6px;height:6px;animation:1.1s ease-in-out infinite seqwXG_aside-activity-pulse}@keyframes seqwXG_aside-activity-pulse{0%,to{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}@media (prefers-reduced-motion:reduce){.seqwXG_activityDot{animation:none}}.seqwXG_hint{color:var(--dsw-alias-text-secondary,#666);margin:6px 0 0;font-size:12px}.seqwXG_close{width:28px;height:28px;color:var(--dsw-alias-text-secondary,#666);cursor:pointer;background:0 0;border:none;border-radius:6px;font-size:20px;line-height:1;position:absolute;top:8px;right:10px}.seqwXG_close:hover{background:var(--dsw-alias-bg-hover,#0000000d)}.seqwXG_error,.seqwXG_notice{border-radius:8px;margin:8px 14px 0;padding:8px 10px;font-size:12px}.seqwXG_error{background:color-mix(in srgb, var(--dsw-alias-state-danger,#c00) 10%, transparent);color:var(--dsw-alias-state-danger,#c00)}.seqwXG_notice{background:var(--dsw-alias-bg-hover,#0000000d);color:var(--dsw-alias-text-secondary,#666)}.seqwXG_messages{flex-direction:column;flex:1;gap:12px;padding:12px 14px;display:flex;overflow-y:auto}.seqwXG_status{color:var(--dsw-alias-text-secondary,#666);margin:0;font-size:13px}.seqwXG_draftCard{border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-base,#fafafa);border-radius:10px;padding:12px}.seqwXG_draftLabel{color:var(--dsw-alias-text-secondary,#666);margin-bottom:6px;font-size:11px;font-weight:600;display:block}.seqwXG_draftQuote{border-left:2px solid var(--dsw-alias-state-business-primary,#1a6bff);color:var(--dsw-alias-text-primary,#1a1a1a);white-space:pre-wrap;margin:0 0 8px;padding-left:10px;font-size:13px;line-height:1.5}.seqwXG_row{flex-direction:column;gap:4px;animation:.16s ease-out seqwXG_aside-row-in;display:flex}@keyframes seqwXG_aside-row-in{0%{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}@media (prefers-reduced-motion:reduce){.seqwXG_row{animation:none}}.seqwXG_role{color:var(--dsw-alias-text-secondary,#888);font-size:11px;font-weight:600}.seqwXG_userText{white-space:pre-wrap;word-break:break-word;margin:0;font-size:13px}.seqwXG_toolRow{background:var(--dsw-alias-bg-hover,#0000000d);color:var(--dsw-alias-text-secondary,#666);border-radius:999px;align-self:flex-start;padding:3px 10px;font-size:12px}.seqwXG_backToBottom{border:1px solid var(--dsw-alias-line-weak,#7f7f7f59);background:var(--dsw-alias-bg-container,#fff);font:inherit;color:var(--dsw-alias-text-primary,#1a1a1a);cursor:pointer;border-radius:999px;padding:4px 12px;font-size:12px;position:absolute;bottom:92px;right:24px;box-shadow:0 2px 8px #00000024}.seqwXG_composer{border-top:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);flex-direction:column;gap:8px;padding:10px 14px 14px;display:flex}.seqwXG_commandMenu{border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:8px;flex-direction:column;gap:2px;padding:4px;display:flex;box-shadow:0 4px 14px #0000001a}.seqwXG_commandItem{color:var(--dsw-alias-text-primary,#1a1a1a);cursor:pointer;text-align:left;background:0 0;border:none;border-radius:6px;padding:6px 8px;font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace}.seqwXG_commandItem:hover,.seqwXG_commandItem:focus-visible{background:var(--dsw-alias-bg-hover,#0000000d);outline:none}.seqwXG_input{border:1px solid var(--dsw-alias-line-weak,#7f7f7f59);background:var(--dsw-alias-bg-base,#fafafa);width:100%;min-height:84px;max-height:200px;font:inherit;resize:vertical;border-radius:8px;padding:8px 10px;font-size:13px}.seqwXG_composerToolbar,.seqwXG_toolbarStart,.seqwXG_toolbarEnd,.seqwXG_compactControl{align-items:center;display:flex}.seqwXG_composerToolbar{justify-content:space-between;gap:8px}.seqwXG_toolbarStart,.seqwXG_toolbarEnd{gap:6px;min-width:0}.seqwXG_compactControl{gap:4px;min-width:0}.seqwXG_commandTrigger{width:28px;height:28px;color:var(--dsw-alias-text-secondary,#666);font:inherit;cursor:pointer;background:0 0;border:none;border-radius:50%;justify-content:center;align-items:center;padding:0;font-size:18px;display:inline-flex}.seqwXG_commandTrigger:hover,.seqwXG_commandTrigger:focus-visible{background:var(--dsw-alias-bg-hover,#0000000d);outline:none}.seqwXG_toolbarEnd .seqwXG_select{max-width:150px}.seqwXG_send{background:var(--dsw-alias-state-business-primary,#1a6bff);color:#fff;width:32px;height:32px;font:inherit;cursor:pointer;border:none;border-radius:50%;flex:none;padding:0;font-size:19px;line-height:1}.seqwXG_send:disabled{opacity:.5;cursor:not-allowed}@media (width<=520px){.seqwXG_composerToolbar{flex-direction:column;align-items:flex-start}.seqwXG_toolbarEnd{justify-content:flex-end;width:100%}}";
-		const tagId$2 = "@ywzhang1031/dsh-client-ui-aside/AsideDrawer.module.css";
+		const tagId$2 = "dsh-client-ui-aside/AsideDrawer.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@ywzhang1031/dsh-client-ui-aside";
+			tag.dataset.plugin = "dsh-client-ui-aside";
 			tag.dataset.pluginCss = tagId$2;
 			tag.textContent = css$2;
 			document.head.appendChild(tag);
@@ -5049,7 +5049,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* first prompt instead of mutating the parent.
 		* History streams via adaptive polling (fast while generating, backing off
 		* when idle, stopping when hidden/closed) with autoscroll.
-		* @module @ywzhang1031/dsh-client-ui-aside/AsideDrawer
+		* @module dsh-client-ui-aside/AsideDrawer
 		*/
 		/** The command whitelist allowed inside an aside (first version). */
 		const ASIDE_COMMANDS = /* @__PURE__ */ new Set([
@@ -5649,12 +5649,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/evan/Desktop/dsh-aside/packages/client-ui-aside/src/client/AsideSidebar.module.css.mjs
+		//#region \0dsh-css:packages/client-ui-aside/src/client/AsideSidebar.module.css.mjs
 		const css$1 = ".P7Ci5G_sidebar{z-index:40;pointer-events:auto;flex-direction:column;gap:8px;width:268px;max-height:calc(100vh - 24px);display:flex;position:fixed;top:12px;right:12px}.P7Ci5G_section{border:1px solid var(--dsw-alias-line-weak,#7f7f7f40);background:var(--dsw-alias-bg-container,#fff);border-radius:10px;overflow:hidden;box-shadow:0 4px 18px #00000014}.P7Ci5G_sectionHead{width:100%;font:inherit;color:var(--dsw-alias-text-primary,#1a1a1a);cursor:pointer;text-align:left;background:0 0;border:none;justify-content:space-between;align-items:center;padding:8px 12px;font-size:12px;font-weight:600;display:flex}.P7Ci5G_sectionHead:hover{background:var(--dsw-alias-bg-hover,#0000000a)}.P7Ci5G_count{background:var(--dsw-alias-bg-hover,#0000000f);color:var(--dsw-alias-text-secondary,#666);border-radius:999px;padding:0 8px;font-size:11px;font-weight:500}.P7Ci5G_list{flex-direction:column;gap:2px;max-height:320px;margin:0;padding:0 6px 8px;list-style:none;display:flex;overflow-y:auto}.P7Ci5G_empty{color:var(--dsw-alias-text-secondary,#888);padding:4px 8px;font-size:12px}.P7Ci5G_asideEntry{width:100%;font:inherit;color:var(--dsw-alias-state-business-primary,#1a6bff);text-align:left;cursor:pointer;text-overflow:ellipsis;white-space:normal;background:0 0;border:none;border-radius:6px;flex-direction:column;gap:2px;padding:5px 8px;font-size:12px;display:flex;overflow:hidden}.P7Ci5G_asideEntry:hover{background:var(--dsw-alias-bg-hover,#0000000d);text-underline-offset:2px;text-decoration:underline}.P7Ci5G_asideEntry.P7Ci5G_active{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#1a6bff) 10%, transparent);box-shadow:inset 2px 0 0 var(--dsw-alias-state-business-primary,#1a6bff)}.P7Ci5G_asideText{text-overflow:ellipsis;white-space:nowrap;display:block;overflow:hidden}.P7Ci5G_asideTime{color:var(--dsw-alias-text-secondary,#888);text-overflow:ellipsis;white-space:nowrap;font-size:10px;text-decoration:none;display:block;overflow:hidden}";
-		const tagId$1 = "@ywzhang1031/dsh-client-ui-aside/AsideSidebar.module.css";
+		const tagId$1 = "dsh-client-ui-aside/AsideSidebar.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@ywzhang1031/dsh-client-ui-aside";
+			tag.dataset.plugin = "dsh-client-ui-aside";
 			tag.dataset.pluginCss = tagId$1;
 			tag.textContent = css$1;
 			document.head.appendChild(tag);
@@ -5679,7 +5679,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* the drawer and locates the parent message. The list comes from the Host
 		* repository cache (no localStorage, no history polling); switching the
 		* parent session triggers one `aside.list` refresh.
-		* @module @ywzhang1031/dsh-client-ui-aside/AsideSidebar
+		* @module dsh-client-ui-aside/AsideSidebar
 		*/
 		/** Compact locale-aware timestamp for one sidebar row. */
 		function formatAsideTime(timestamp) {
@@ -5767,12 +5767,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/evan/Desktop/dsh-aside/packages/client-ui-aside/src/client/AsideAskAction.module.css.mjs
+		//#region \0dsh-css:packages/client-ui-aside/src/client/AsideAskAction.module.css.mjs
 		const css = ".znUWta_action{font:inherit;cursor:pointer;color:inherit;background:0 0;border:none;border-radius:4px;justify-content:center;align-items:center;padding:4px;line-height:1;display:inline-flex}.znUWta_action:hover,.znUWta_action:focus{background:var(--dsw-alias-state-business-weak,#7f7f7f1f);outline:none}.znUWta_action:disabled{opacity:.6;cursor:wait}";
-		const tagId = "@ywzhang1031/dsh-client-ui-aside/AsideAskAction.module.css";
+		const tagId = "dsh-client-ui-aside/AsideAskAction.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "@ywzhang1031/dsh-client-ui-aside";
+			tag.dataset.plugin = "dsh-client-ui-aside";
 			tag.dataset.pluginCss = tagId;
 			tag.textContent = css;
 			document.head.appendChild(tag);
@@ -5787,7 +5787,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* {@link MessageDomRegistry} so the sidebar can scroll back to this message.
 		* The message text is resolved from history; clicking an already-asked
 		* message reopens its aside.
-		* @module @ywzhang1031/dsh-client-ui-aside/AsideAskAction
+		* @module dsh-client-ui-aside/AsideAskAction
 		*/
 		/** Extract the plain text of a content-block array. */
 		function textOf(blocks) {
@@ -6040,7 +6040,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 		* attribution comes from the runtime sessions service plus history matching
 		* (stock renders the assistant-actions strip in a sibling node of the message
 		* text, so the selection cannot be attributed by sentinel containment).
-		* @module @ywzhang1031/dsh-client-ui-aside/client
+		* @module dsh-client-ui-aside/client
 		*/
 		/** Dictionary namespace owned by this plugin. */
 		const NS = "aside";

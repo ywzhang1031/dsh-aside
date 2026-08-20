@@ -1,7 +1,7 @@
 /** Aside navigation-visibility tests over the public Workspace archive face. */
 
 import { describe, expect, it, vi } from 'vitest'
-import type { AsideRecord } from '@ywzhang1031/dsh-aside-host/types'
+import type { AsideRecord } from 'dsh-aside-host/types'
 import { AsideVisibility } from '../src/client/visibility.ts'
 
 const RECORD: AsideRecord = {

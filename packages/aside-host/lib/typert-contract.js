@@ -3,9 +3,9 @@ import { z } from "zod";
 /**
 * Package-owned Remote descriptor shared by the Host registry contribution
 * and the browser Remote stub.
-* @module @ywzhang1031/dsh-aside-host/typert-contract
+* @module dsh-aside-host/typert-contract
 */
-const ASIDE_PACKAGE = "@ywzhang1031/dsh-aside-host";
+const ASIDE_PACKAGE = "dsh-aside-host";
 const anchorSchema = z.object({
 	messageId: z.string().nullable(),
 	exact: z.string(),

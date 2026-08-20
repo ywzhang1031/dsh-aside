@@ -1,0 +1,8 @@
+# Public one-package entry point. DSH resolves these rows from this bundle's
+# declared dependencies, so users install only dsh-aside.
+- insert:
+    - id: aside-host
+      name: 'dsh-aside-host'
+
+    - id: ui-aside
+      name: 'dsh-client-ui-aside'

@@ -5,9 +5,9 @@
  * session. A freshly created aside is added to the cache directly from the
  * create response (no second local fact), and switching parent sessions
  * triggers one `aside.list` refresh. No polling and no `localStorage`.
- * @module @ywzhang1031/dsh-client-ui-aside/repository
+ * @module dsh-client-ui-aside/repository
  */
-import { anchorKey } from '@ywzhang1031/dsh-aside-host/types';
+import { anchorKey } from 'dsh-aside-host/types';
 /** Normalize one record's anchor text for the sidebar display. */
 export function asideText(record, max = 60) {
     const compact = record.anchor.exact.replace(/\s+/g, ' ').trim();

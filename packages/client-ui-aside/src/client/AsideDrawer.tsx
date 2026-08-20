@@ -9,7 +9,7 @@
  * first prompt instead of mutating the parent.
  * History streams via adaptive polling (fast while generating, backing off
  * when idle, stopping when hidden/closed) with autoscroll.
- * @module @ywzhang1031/dsh-client-ui-aside/AsideDrawer
+ * @module dsh-client-ui-aside/AsideDrawer
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
@@ -17,7 +17,7 @@ import type { IApiClient, SessionId } from '@deepseek-ai/dsh-client-connection/c
 import { MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
 import { DrawerStore, type DrawerState } from './drawer-store.ts'
 import type { AsideLocaleKey } from './locales.ts'
-import { anchorSummary, parseAnchor } from '@ywzhang1031/dsh-aside-host/types'
+import { anchorSummary, parseAnchor } from 'dsh-aside-host/types'
 import css from './AsideDrawer.module.css'
 
 /** One display row projected from the raw history events. */

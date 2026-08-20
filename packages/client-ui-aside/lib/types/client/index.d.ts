@@ -15,7 +15,7 @@
  * attribution comes from the runtime sessions service plus history matching
  * (stock renders the assistant-actions strip in a sibling node of the message
  * text, so the selection cannot be attributed by sentinel containment).
- * @module @ywzhang1031/dsh-client-ui-aside/client
+ * @module dsh-client-ui-aside/client
  */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client';
 export { AsideRepository, asideText } from './repository.ts';

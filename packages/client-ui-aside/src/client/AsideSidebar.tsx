@@ -4,11 +4,11 @@
  * the drawer and locates the parent message. The list comes from the Host
  * repository cache (no localStorage, no history polling); switching the
  * parent session triggers one `aside.list` refresh.
- * @module @ywzhang1031/dsh-client-ui-aside/AsideSidebar
+ * @module dsh-client-ui-aside/AsideSidebar
  */
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import type { AsideRecord } from '@ywzhang1031/dsh-aside-host/types'
+import type { AsideRecord } from 'dsh-aside-host/types'
 import { AsideRepository, asideText } from './repository.ts'
 import { DrawerStore } from './drawer-store.ts'
 import type { AsideLocaleKey } from './locales.ts'

@@ -5,7 +5,7 @@
 #   dsh plugin add ./dist/dsh-client-ui-aside-0.1.0.tgz
 - insert:
     - id: aside-host
-      name: '@ywzhang1031/dsh-aside-host'
+      name: 'dsh-aside-host'
 
     - id: ui-aside
-      name: '@ywzhang1031/dsh-client-ui-aside'
+      name: 'dsh-client-ui-aside'

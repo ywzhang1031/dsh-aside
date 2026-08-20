@@ -39,7 +39,7 @@
  * The gateway composes everything itself: it needs no agent-preset roster
  * and no deployment configuration, so it runs on a stock DSH deployment with
  * no source modifications.
- * @module @ywzhang1031/dsh-aside-host
+ * @module dsh-aside-host
  */
 import type { Context } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';

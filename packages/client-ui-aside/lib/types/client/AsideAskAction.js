@@ -6,7 +6,7 @@ import { jsx as _jsx } from "react/jsx-runtime";
  * {@link MessageDomRegistry} so the sidebar can scroll back to this message.
  * The message text is resolved from history; clicking an already-asked
  * message reopens its aside.
- * @module @ywzhang1031/dsh-client-ui-aside/AsideAskAction
+ * @module dsh-client-ui-aside/AsideAskAction
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';

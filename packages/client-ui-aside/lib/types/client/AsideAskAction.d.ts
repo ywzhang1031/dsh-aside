@@ -5,10 +5,10 @@
  * {@link MessageDomRegistry} so the sidebar can scroll back to this message.
  * The message text is resolved from history; clicking an already-asked
  * message reopens its aside.
- * @module @ywzhang1031/dsh-client-ui-aside/AsideAskAction
+ * @module dsh-client-ui-aside/AsideAskAction
  */
 import type { IApiClient, MessageId } from '@deepseek-ai/dsh-client-connection/client';
-import type { AsideAnchor } from '@ywzhang1031/dsh-aside-host/types';
+import type { AsideAnchor } from 'dsh-aside-host/types';
 import type { AsideLocaleKey } from './locales.ts';
 import type { AsideRepository } from './repository.ts';
 import type { DrawerStore } from './drawer-store.ts';

@@ -1,4 +1,4 @@
-/** Browser Remote contribution for the Aside endpoints. @module @ywzhang1031/dsh-aside-host/remote */
+/** Browser Remote contribution for the Aside endpoints. @module dsh-aside-host/remote */
 
 import type {
   RemoteResult,

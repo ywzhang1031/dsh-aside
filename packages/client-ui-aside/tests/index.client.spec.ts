@@ -16,7 +16,7 @@
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import { waitFor } from '@testing-library/react'
-import type { AsideRecord } from '@ywzhang1031/dsh-aside-host/types'
+import type { AsideRecord } from 'dsh-aside-host/types'
 import { apply, inject } from '../src/client/index.ts'
 
 /** Minimal slots registry: inject generators run eagerly, entries key by name, teardown rides ctx.effect. */

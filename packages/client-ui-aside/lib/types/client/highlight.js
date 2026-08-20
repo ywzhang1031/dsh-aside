@@ -6,7 +6,7 @@
  * `caretPositionFromPoint`/`caretRangeFromPoint` and tests membership in
  * each aside's restored Range. Browsers without Custom Highlight fall back to
  * message-level styling; the caller owns that CSS class.
- * @module @ywzhang1031/dsh-client-ui-aside/highlight
+ * @module dsh-client-ui-aside/highlight
  */
 import { restoreRange } from "./quote.js";
 /** The single CSS highlight name shared by every aside's exact highlight. */

@@ -6,7 +6,7 @@
  * {@link resolveMessageId} (history matching) because stock renders the
  * assistant-actions strip in a sibling node of the message text. The watcher
  * stays outside the React tree entirely.
- * @module @ywzhang1031/dsh-client-ui-aside/selection
+ * @module dsh-client-ui-aside/selection
  */
 import { buildQuote, normalizeText } from "./quote.js";
 import { chatAnchorRow } from "./message-dom-registry.js";

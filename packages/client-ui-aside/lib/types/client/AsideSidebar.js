@@ -5,7 +5,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  * the drawer and locates the parent message. The list comes from the Host
  * repository cache (no localStorage, no history polling); switching the
  * parent session triggers one `aside.list` refresh.
- * @module @ywzhang1031/dsh-client-ui-aside/AsideSidebar
+ * @module dsh-client-ui-aside/AsideSidebar
  */
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { asideText } from "./repository.js";

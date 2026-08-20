@@ -3,4 +3,4 @@
 # installed with `dsh plugin add`, so this row composes automatically.
 - insert:
     - id: ui-aside
-      name: '@ywzhang1031/dsh-client-ui-aside'
+      name: 'dsh-client-ui-aside'

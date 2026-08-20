@@ -10,11 +10,11 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * first prompt instead of mutating the parent.
  * History streams via adaptive polling (fast while generating, backing off
  * when idle, stopping when hidden/closed) with autoscroll.
- * @module @ywzhang1031/dsh-client-ui-aside/AsideDrawer
+ * @module dsh-client-ui-aside/AsideDrawer
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';
-import { anchorSummary, parseAnchor } from '@ywzhang1031/dsh-aside-host/types';
+import { anchorSummary, parseAnchor } from 'dsh-aside-host/types';
 import css from './AsideDrawer.module.css';
 /** The command whitelist allowed inside an aside (first version). */
 export const ASIDE_COMMANDS = new Set(['model', 'compact', 'export', 'feedback']);
