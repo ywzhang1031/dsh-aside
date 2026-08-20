@@ -257,7 +257,10 @@ function clientConfig(id: string, entry: string): UserConfig {
         this.addWatchFile(fileId)
         const source = await readFile(fileId)
         const { code, exports: cssExports } = transform({
-          filename: fileId,
+          // Lightning CSS includes the filename in CSS Module hashes. Use the
+          // repository-relative id so macOS/Linux and arbitrary checkout paths
+          // emit the same committed client bundle.
+          filename: sourceId,
           code: source,
           cssModules: { pattern: '[hash]_[local]' },
           minify: true,
